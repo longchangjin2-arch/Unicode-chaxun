@@ -1,0 +1,140 @@
+# Unicode 编码查询
+
+一个功能丰富的 Unicode 字符查询与浏览工具，纯前端单页应用，无需后端服务，开箱即用。
+
+基于 **Unicode 17.0** 标准，内置全部 346 个区块定义，支持 159,801 个字符的查询。
+
+## 功能一览
+
+### 搜索
+- **智能搜索**：自动识别输入类型
+- **多模式查询**：
+  - Unicode 编码（`U+4E00`、`0x4E00`、`19968`）
+  - 按字符查询（输入任意字符即可解析）
+  - HTML 实体（`&#20013;`、`&#x4E2D;`、`&amp;`）
+  - CSS 转义（`\4E2D`）
+  - URL 编码（`%E4%B8%AD`）
+  - 按名称搜索（如输入 `heart`、`arrow`）
+- 最近搜索记录
+
+### 字符对比
+- 并排对比两个字符的所有属性
+- 高亮差异项
+- 支持代理对和不可见字符
+
+### 批量解析
+- 粘贴一段文本，逐字符解析全部属性
+- 表格展示：码点、UTF-8、UTF-16、HTML 实体、CSS、URL 编码
+- 一键复制任意列
+
+### 随机字符
+- 按语言分区随机（中文、英文、日文、韩文、阿拉伯文等 18 种）
+- 按 Unicode 区块随机
+- 按字符类别随机
+- 一次生成 200 个随机字符
+
+### 浏览方式
+- **按区块浏览**：Unicode 17.0 全部 346 个区块
+- **按类别浏览**：按 Unicode 类别（大写字母、小写字母、数字、标点等）
+- **我的收藏**：支持分组视图和平铺视图（无限滚动）
+- **浏览记录**：自动记录最近 200 个查看过的字符
+
+### 字符详情
+点击任意字符弹出详情卡片，包含：
+- 字符预览 + Unicode 码点（十六进制/十进制）
+- UTF-8 / UTF-16 / HTML 实体 / CSS 转义 / URL 编码
+- Unicode 类别、双向属性、组合类
+- 大小写映射、分解映射、镜像属性
+- 所属区块（中英文）
+- 字符含义（内置字典 + 用户自定义）
+- 字典信息（拼音、笔画、部首）
+- 不可见字符特殊标记与警示
+- 文字放大预览 + 图片导出（PNG / JPG / WebP / SVG）
+
+### 特殊字符处理
+- **不可见字符**（换行、回车、零宽字符、制表符等）：用特殊符号标记显示
+- **Unicode 私有使用区**：警示提示
+- **非字符**（如 `U+FFFE`）：警示提示
+- **未分配码点**：警示提示
+- **控制字符**：警示提示
+- **代理码点**：警示提示
+
+### 个人数据管理
+- **收藏**：点击星标收藏字符
+- **自定义字义**：管理模式下编辑字符含义
+- **自定义字典**：管理模式下编辑拼音、笔画、部首
+- **数据导出/导入**：JSON 格式，方便备份和分享
+- **数据存储**：所有个人数据存储在浏览器 localStorage 中，不上传服务器
+
+### 其他功能
+- **深色模式**：一键切换明暗主题
+- **管理模式**：PIN 码保护编辑功能，防止误操作
+- **Unicode 数据上传**：支持上传完整 UnicodeData.txt 和 Blocks.txt 获取全部字符属性
+- **响应式设计**：适配桌面和移动端
+
+## 使用方法
+
+### 直接使用
+用浏览器打开 `index.html` 即可，无需安装任何依赖。
+
+### 部署上线
+将 `index.html` 上传到任意静态网站托管服务即可：
+- GitHub Pages
+- Vercel / Netlify / Cloudflare Pages
+- 任意 Web 服务器（Nginx、Apache 等）
+
+### 上传完整 Unicode 数据（可选）
+内置数据包含全部 346 个区块定义，但不含每个字符的详细属性。如需完整数据：
+
+1. 打开设置 → 「从文件更新」
+2. 下载以下两个文件（Unicode 17.0.0）：
+   - **UnicodeData.txt**：[https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt](https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt)（约 2.1 MB）
+   - **Blocks.txt**：[https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt](https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt)（约 11 KB）
+3. 点击「上传 UnicodeData.txt」和「上传 Blocks.txt」
+
+上传后可获得全部 159,801 个字符的名称、类别、大小写映射、双向属性等完整信息。数据存储在浏览器 IndexedDB 中。
+
+## 数据存储说明
+
+| 数据类型 | 存储位置 | 说明 |
+|---------|---------|------|
+| 收藏 | localStorage | 收藏的字符码点列表 |
+| 自定义字义 | localStorage | 用户编辑的字符含义 |
+| 自定义字典 | localStorage | 用户编辑的拼音/笔画/部首 |
+| 浏览记录 | localStorage | 最近 200 个查看的字符 |
+| 最近搜索 | localStorage | 最近搜索关键词 |
+| 管理模式 PIN | localStorage | 管理模式密码 |
+| Unicode 数据 | IndexedDB | 上传的 UnicodeData.txt / Blocks.txt |
+
+**导出/导入**：在设置中可将所有个人数据导出为 JSON 文件，方便备份或分享给他人导入。
+
+## 技术栈
+
+- 纯 HTML / CSS / JavaScript（无框架、无依赖）
+- CSS Grid + Flexbox 布局
+- CSS 变量主题系统（深色/浅色）
+- Canvas / SVG 图片导出
+- IndexedDB 存储 Unicode 数据
+- localStorage 存储用户数据
+- IntersectionObserver 无限滚动
+
+## Unicode 版本
+
+- 内置区块数据：**Unicode 17.0**（346 个区块）
+- 支持上传外部 UnicodeData.txt 升级到任意版本
+- 下载地址会随版本更新
+
+## 文件结构
+
+```
+Unicode编码查询/
+├── index.html              # 主应用文件（全部代码）
+├── unicode_data/           # 下载的 Unicode 数据文件（可选）
+│   ├── UnicodeData.txt     # Unicode 17.0 字符数据
+│   └── Blocks.txt          # Unicode 17.0 区块定义
+└── README.md               # 本说明文件
+```
+
+## 反馈
+
+邮箱：37723873772387377@qq.com
