@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
 <title>Unicode编码查询</title>
 <style>
 :root {
@@ -20,7 +21,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   height: 100vh;
@@ -107,7 +108,7 @@ body {
 .tool-page textarea {
   width: 100%; padding: 10px 12px;
   border: 2px solid var(--border); border-radius: 8px;
-  font-size: 15px; font-family: "Microsoft YaHei", "Segoe UI Symbol", sans-serif;
+  font-size: 15px; font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
   background: var(--card); color: var(--text);
   outline: none; transition: border .2s; resize: vertical;
   min-height: 80px;
@@ -151,7 +152,7 @@ body.dark .tool-page .tp-btn.sec:hover { background: #3d4a6c; }
 .compare-char-cell { text-align: center; }
 .compare-char-big {
   font-size: 64px; line-height: 1; margin-bottom: 8px;
-  font-family: "Microsoft YaHei", "Segoe UI Symbol", sans-serif;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 .compare-char-big.same { color: var(--accent); }
 .compare-char-big.diff { color: #e53935; }
@@ -447,7 +448,7 @@ button, input, select, textarea, .sp-mode, .tp-btn, .file-upload-btn {
 }
 .cell .ch {
   font-size: 22px; line-height: 1;
-  font-family: "Segoe UI Symbol", "Noto Sans", "Apple Color Emoji", sans-serif;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 .cell .cp {
   font-size: 9px; font-family: Consolas, monospace;
@@ -622,7 +623,7 @@ body.dark .modal-header .big-char.invisible-marker { background: rgba(0,0,0,0.3)
 }
 .modal-header .big-char {
   font-size: 72px; line-height: 1;
-  font-family: "Segoe UI Symbol", "Noto Sans", sans-serif;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 .modal-header .name {
   font-size: 16px; font-weight: 700; margin-top: 6px;
@@ -908,22 +909,22 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
 <!-- 左侧边栏 -->
 <nav class="sidebar" id="sidebar">
   <h2>功能菜单</h2>
-  <button class="nav-btn" data-view="search" onclick="showSearch()">🔍 搜索</button>
+  <button class="nav-btn" data-view="search" onclick="showSearch()">🔍️ 搜索</button>
   <button class="nav-btn" data-view="compare" onclick="showCompare()">⚖️ 字符对比</button>
-  <button class="nav-btn" data-view="batch" onclick="showBatch()">📊 批量解析</button>
+  <button class="nav-btn" data-view="batch" onclick="showBatch()">📊️ 批量解析</button>
   <div class="sep"></div>
-  <button class="nav-btn" data-view="random" onclick="showRandom()">🎲 随机字符</button>
-  <button class="nav-btn active" data-view="blocks" onclick="showBlocks()">📂 按区块浏览</button>
+  <button class="nav-btn" data-view="random" onclick="showRandom()">🎲️ 随机字符</button>
+  <button class="nav-btn active" data-view="blocks" onclick="showBlocks()">📂️ 按区块浏览</button>
   <button class="nav-btn" data-view="categories" onclick="showCategories()">🏷️ 按类别浏览</button>
-  <button class="nav-btn" data-view="history" onclick="showHistory()">📜 浏览记录</button>
-  <button class="nav-btn" data-view="favorites" onclick="showFavorites()">⭐ 我的收藏</button>
+  <button class="nav-btn" data-view="history" onclick="showHistory()">📜️ 浏览记录</button>
+  <button class="nav-btn" data-view="favorites" onclick="showFavorites()">⭐️ 我的收藏</button>
   <div class="sep"></div>
   <div class="theme-toggle">
     <input type="checkbox" id="themeSwitch" onchange="toggleTheme()">
     <label for="themeSwitch">深色模式</label>
   </div>
   <div class="fav-count" id="favCount">收藏: 0 个</div>
-  <div class="unicode-version" id="sidebarVersion" onclick="showSettings()">Unicode: 内置</div>
+  <div class="unicode-version" id="sidebarVersion" onclick="showSettings()">Unicode: 内置 (17.0)</div>
 </nav>
 
 <!-- 主内容 -->
@@ -954,7 +955,7 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
   <div class="modal" style="max-width:90vw">
     <button class="modal-close" onclick="closeZoomPreview()">×</button>
     <div class="modal-header">
-      <div class="name" id="zoomTitle">🔍 放大预览</div>
+      <div class="name" id="zoomTitle">🔍️ 放大预览</div>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px">
       <canvas id="zoomCanvas" width="400" height="400" style="border:1px solid #ddd;border-radius:8px;background:white"></canvas>
@@ -1000,63 +1001,352 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
 // 数据常量
 // ============================================================
 const BLOCKS = [
-  ["基本拉丁字母","Basic Latin",0x0020,0x007E],
-  ["拉丁补充","Latin-1 Supplement",0x00A0,0x00FF],
+  ["基本拉丁字母","Basic Latin",0x0000,0x007F],
+  ["拉丁补充","Latin-1 Supplement",0x0080,0x00FF],
   ["拉丁扩展-A","Latin Extended-A",0x0100,0x017F],
   ["拉丁扩展-B","Latin Extended-B",0x0180,0x024F],
   ["国际音标扩展","IPA Extensions",0x0250,0x02AF],
   ["间距修饰字符","Spacing Modifier Letters",0x02B0,0x02FF],
   ["组合附加符号","Combining Diacritical Marks",0x0300,0x036F],
-  ["拉丁扩展附加","Latin Extended Additional",0x1E00,0x1EFF],
   ["希腊语和科普特语","Greek and Coptic",0x0370,0x03FF],
   ["西里尔字母","Cyrillic",0x0400,0x04FF],
+  ["西里尔字母补充","Cyrillic Supplement",0x0500,0x052F],
   ["亚美尼亚字母","Armenian",0x0530,0x058F],
   ["希伯来字母","Hebrew",0x0590,0x05FF],
   ["阿拉伯字母","Arabic",0x0600,0x06FF],
+  ["叙利亚字母","Syriac",0x0700,0x074F],
+  ["阿拉伯字母补充","Arabic Supplement",0x0750,0x077F],
+  ["塔安那字母","Thaana",0x0780,0x07BF],
+  ["恩科字母","NKo",0x07C0,0x07FF],
+  ["撒马利亚字母","Samaritan",0x0800,0x083F],
+  ["曼达安字母","Mandaic",0x0840,0x085F],
+  ["叙利亚字母补充","Syriac Supplement",0x0860,0x086F],
+  ["阿拉伯字母扩展-B","Arabic Extended-B",0x0870,0x089F],
+  ["阿拉伯字母扩展-A","Arabic Extended-A",0x08A0,0x08FF],
   ["天城文字母","Devanagari",0x0900,0x097F],
   ["孟加拉字母","Bengali",0x0980,0x09FF],
+  ["古木基字母","Gurmukhi",0x0A00,0x0A7F],
+  ["古吉拉特字母","Gujarati",0x0A80,0x0AFF],
+  ["奥里亚字母","Oriya",0x0B00,0x0B7F],
+  ["泰米尔字母","Tamil",0x0B80,0x0BFF],
+  ["泰卢固字母","Telugu",0x0C00,0x0C7F],
+  ["卡纳达字母","Kannada",0x0C80,0x0CFF],
+  ["马拉雅拉姆字母","Malayalam",0x0D00,0x0D7F],
+  ["僧伽罗字母","Sinhala",0x0D80,0x0DFF],
   ["泰文字母","Thai",0x0E00,0x0E7F],
+  ["老挝文字母","Lao",0x0E80,0x0EFF],
   ["藏文字母","Tibetan",0x0F00,0x0FFF],
+  ["缅甸文字母","Myanmar",0x1000,0x109F],
+  ["格鲁吉亚字母","Georgian",0x10A0,0x10FF],
+  ["谚文字母","Hangul Jamo",0x1100,0x11FF],
+  ["埃塞俄比亚字母","Ethiopic",0x1200,0x137F],
+  ["埃塞俄比亚字母补充","Ethiopic Supplement",0x1380,0x139F],
+  ["切罗基字母","Cherokee",0x13A0,0x13FF],
+  ["统一加拿大原住民音节","Unified Canadian Aboriginal Syllabics",0x1400,0x167F],
+  ["欧甘字母","Ogham",0x1680,0x169F],
+  ["卢恩字母","Runic",0x16A0,0x16FF],
+  ["他加禄字母","Tagalog",0x1700,0x171F],
+  ["哈努诺字母","Hanunoo",0x1720,0x173F],
+  ["布希德字母","Buhid",0x1740,0x175F],
+  ["塔格班瓦字母","Tagbanwa",0x1760,0x177F],
+  ["高棉文字母","Khmer",0x1780,0x17FF],
+  ["蒙古文字母","Mongolian",0x1800,0x18AF],
+  ["统一加拿大原住民音节扩展","Unified Canadian Aboriginal Syllabics Extended",0x18B0,0x18FF],
+  ["林布字母","Limbu",0x1900,0x194F],
+  ["德宏傣文","Tai Le",0x1950,0x197F],
+  ["新傣仂文","New Tai Lue",0x1980,0x19DF],
+  ["高棉符号","Khmer Symbols",0x19E0,0x19FF],
+  ["武吉斯字母","Buginese",0x1A00,0x1A1F],
+  ["老傣文","Tai Tham",0x1A20,0x1AAF],
+  ["组合附加符号扩展","Combining Diacritical Marks Extended",0x1AB0,0x1AFF],
+  ["巴厘字母","Balinese",0x1B00,0x1B7F],
+  ["巽他字母","Sundanese",0x1B80,0x1BBF],
+  ["巴塔克字母","Batak",0x1BC0,0x1BFF],
+  ["雷布查字母","Lepcha",0x1C00,0x1C4F],
+  ["桑塔尔字母","Ol Chiki",0x1C50,0x1C7F],
+  ["西里尔字母扩展-C","Cyrillic Extended-C",0x1C80,0x1C8F],
+  ["格鲁吉亚字母扩展","Georgian Extended",0x1C90,0x1CBF],
+  ["巽他字母补充","Sundanese Supplement",0x1CC0,0x1CCF],
+  ["吠陀扩展","Vedic Extensions",0x1CD0,0x1CFF],
+  ["语音扩展","Phonetic Extensions",0x1D00,0x1D7F],
+  ["语音扩展补充","Phonetic Extensions Supplement",0x1D80,0x1DBF],
+  ["组合附加符号补充","Combining Diacritical Marks Supplement",0x1DC0,0x1DFF],
+  ["拉丁扩展附加","Latin Extended Additional",0x1E00,0x1EFF],
+  ["希腊字母扩展","Greek Extended",0x1F00,0x1FFF],
   ["一般标点符号","General Punctuation",0x2000,0x206F],
   ["上标和下标","Superscripts and Subscripts",0x2070,0x209F],
   ["货币符号","Currency Symbols",0x20A0,0x20CF],
+  ["符号用组合附加符号","Combining Diacritical Marks for Symbols",0x20D0,0x20FF],
   ["字母式符号","Letterlike Symbols",0x2100,0x214F],
   ["数字形式","Number Forms",0x2150,0x218F],
   ["箭头","Arrows",0x2190,0x21FF],
   ["数学运算符","Mathematical Operators",0x2200,0x22FF],
   ["杂项技术符号","Miscellaneous Technical",0x2300,0x23FF],
   ["控制图片","Control Pictures",0x2400,0x243F],
+  ["光学字符识别","Optical Character Recognition",0x2440,0x245F],
   ["封闭字母数字","Enclosed Alphanumerics",0x2460,0x24FF],
   ["制表符","Box Drawing",0x2500,0x257F],
   ["区块元素","Block Elements",0x2580,0x259F],
   ["几何图形","Geometric Shapes",0x25A0,0x25FF],
   ["杂项符号","Miscellaneous Symbols",0x2600,0x26FF],
   ["叮当符号","Dingbats",0x2700,0x27BF],
+  ["杂项数学符号-A","Miscellaneous Mathematical Symbols-A",0x27C0,0x27EF],
   ["补充箭头-A","Supplemental Arrows-A",0x27F0,0x27FF],
+  ["盲文模式","Braille Patterns",0x2800,0x28FF],
   ["补充箭头-B","Supplemental Arrows-B",0x2900,0x297F],
+  ["杂项数学符号-B","Miscellaneous Mathematical Symbols-B",0x2980,0x29FF],
   ["补充数学运算符","Supplemental Mathematical Operators",0x2A00,0x2AFF],
   ["杂项符号和箭头","Miscellaneous Symbols and Arrows",0x2B00,0x2BFF],
-  ["一般标点符号补充","Supplemental Punctuation",0x2E00,0x2E7F],
-  ["CJK标点和符号","CJK Symbols and Punctuation",0x3000,0x303F],
+  ["格拉哥里字母","Glagolitic",0x2C00,0x2C5F],
+  ["拉丁扩展-C","Latin Extended-C",0x2C60,0x2C7F],
+  ["科普特字母","Coptic",0x2C80,0x2CFF],
+  ["格鲁吉亚字母补充","Georgian Supplement",0x2D00,0x2D2F],
+  ["提非纳格字母","Tifinagh",0x2D30,0x2D7F],
+  ["埃塞俄比亚字母扩展","Ethiopic Extended",0x2D80,0x2DDF],
+  ["西里尔字母扩展-A","Cyrillic Extended-A",0x2DE0,0x2DFF],
+  ["标点符号补充","Supplemental Punctuation",0x2E00,0x2E7F],
+  ["CJK部首补充","CJK Radicals Supplement",0x2E80,0x2EFF],
+  ["康熙部首","Kangxi Radicals",0x2F00,0x2FDF],
+  ["表意文字描述字符","Ideographic Description Characters",0x2FF0,0x2FFF],
+  ["CJK符号和标点","CJK Symbols and Punctuation",0x3000,0x303F],
   ["平假名","Hiragana",0x3040,0x309F],
   ["片假名","Katakana",0x30A0,0x30FF],
   ["注音符号","Bopomofo",0x3100,0x312F],
+  ["谚文兼容字母","Hangul Compatibility Jamo",0x3130,0x318F],
+  ["汉文返点","Kanbun",0x3190,0x319F],
+  ["注音符号扩展","Bopomofo Extended",0x31A0,0x31BF],
+  ["CJK笔画","CJK Strokes",0x31C0,0x31EF],
+  ["片假名语音扩展","Katakana Phonetic Extensions",0x31F0,0x31FF],
+  ["封闭CJK字母和月份","Enclosed CJK Letters and Months",0x3200,0x32FF],
+  ["CJK兼容","CJK Compatibility",0x3300,0x33FF],
   ["CJK统一表意文字扩展A","CJK Unified Ideographs Extension A",0x3400,0x4DBF],
+  ["易经卦象符号","Yijing Hexagram Symbols",0x4DC0,0x4DFF],
   ["CJK统一表意文字","CJK Unified Ideographs",0x4E00,0x9FFF],
+  ["彝文音节","Yi Syllables",0xA000,0xA48F],
+  ["彝文部首","Yi Radicals",0xA490,0xA4CF],
+  ["傈僳字母","Lisu",0xA4D0,0xA4FF],
+  ["瓦伊字母","Vai",0xA500,0xA63F],
+  ["西里尔字母扩展-B","Cyrillic Extended-B",0xA640,0xA69F],
+  ["巴姆穆字母","Bamum",0xA6A0,0xA6FF],
+  ["声调修饰字符","Modifier Tone Letters",0xA700,0xA71F],
+  ["拉丁扩展-D","Latin Extended-D",0xA720,0xA7FF],
+  ["西尔赫特纳格里字母","Syloti Nagri",0xA800,0xA82F],
+  ["常用印度数字形式","Common Indic Number Forms",0xA830,0xA83F],
+  ["八思巴字母","Phags-pa",0xA840,0xA87F],
+  ["索拉什特拉字母","Saurashtra",0xA880,0xA8DF],
+  ["天城文字母扩展","Devanagari Extended",0xA8E0,0xA8FF],
+  ["克耶字母","Kayah Li",0xA900,0xA92F],
+  ["勒姜字母","Rejang",0xA930,0xA95F],
+  ["谚文字母扩展-A","Hangul Jamo Extended-A",0xA960,0xA97F],
+  ["爪哇字母","Javanese",0xA980,0xA9DF],
+  ["缅甸文字母扩展-B","Myanmar Extended-B",0xA9E0,0xA9FF],
+  ["占语字母","Cham",0xAA00,0xAA5F],
+  ["缅甸文字母扩展-A","Myanmar Extended-A",0xAA60,0xAA7F],
+  ["越南傣文","Tai Viet",0xAA80,0xAADF],
+  ["梅泰马耶克扩展","Meetei Mayek Extensions",0xAAE0,0xAAFF],
+  ["埃塞俄比亚字母扩展-A","Ethiopic Extended-A",0xAB00,0xAB2F],
+  ["拉丁扩展-E","Latin Extended-E",0xAB30,0xAB6F],
+  ["切罗基字母补充","Cherokee Supplement",0xAB70,0xABBF],
+  ["梅泰马耶克字母","Meetei Mayek",0xABC0,0xABFF],
   ["谚文音节","Hangul Syllables",0xAC00,0xD7AF],
+  ["谚文字母扩展-B","Hangul Jamo Extended-B",0xD7B0,0xD7FF],
+  ["高位代理区","High Surrogates",0xD800,0xDB7F],
+  ["高位专用代理区","High Private Use Surrogates",0xDB80,0xDBFF],
+  ["低位代理区","Low Surrogates",0xDC00,0xDFFF],
+  ["专用区","Private Use Area",0xE000,0xF8FF],
   ["CJK兼容表意文字","CJK Compatibility Ideographs",0xF900,0xFAFF],
   ["字母表现形式","Alphabetic Presentation Forms",0xFB00,0xFB4F],
   ["阿拉伯表现形式-A","Arabic Presentation Forms-A",0xFB50,0xFDFF],
+  ["变体选择符","Variation Selectors",0xFE00,0xFE0F],
+  ["竖排形式","Vertical Forms",0xFE10,0xFE1F],
+  ["组合半角符号","Combining Half Marks",0xFE20,0xFE2F],
+  ["CJK兼容形式","CJK Compatibility Forms",0xFE30,0xFE4F],
+  ["小型变体形式","Small Form Variants",0xFE50,0xFE6F],
   ["阿拉伯表现形式-B","Arabic Presentation Forms-B",0xFE70,0xFEFF],
+  ["半角和全角形式","Halfwidth and Fullwidth Forms",0xFF00,0xFFEF],
   ["特殊字符","Specials",0xFFF0,0xFFFF],
-  ["游戏符号","Mahjong Tiles",0x1F000,0x1F02F],
-  ["扑克符号","Domino Tiles",0x1F030,0x1F09F],
+  ["线形文字B音节","Linear B Syllabary",0x10000,0x1007F],
+  ["线形文字B表意文字","Linear B Ideograms",0x10080,0x100FF],
+  ["爱琴海数字","Aegean Numbers",0x10100,0x1013F],
+  ["古希腊数字","Ancient Greek Numbers",0x10140,0x1018F],
+  ["古代符号","Ancient Symbols",0x10190,0x101CF],
+  ["费斯托斯圆盘","Phaistos Disc",0x101D0,0x101FF],
+  ["吕基亚字母","Lycian",0x10280,0x1029F],
+  ["卡里亚字母","Carian",0x102A0,0x102DF],
+  ["科普特闰余数字","Coptic Epact Numbers",0x102E0,0x102FF],
+  ["古意大利字母","Old Italic",0x10300,0x1032F],
+  ["哥特字母","Gothic",0x10330,0x1034F],
+  ["古彼尔姆字母","Old Permic",0x10350,0x1037F],
+  ["乌加里特字母","Ugaritic",0x10380,0x1039F],
+  ["古波斯字母","Old Persian",0x103A0,0x103DF],
+  ["德瑟雷特字母","Deseret",0x10400,0x1044F],
+  ["肖伯纳字母","Shavian",0x10450,0x1047F],
+  ["奥斯曼亚字母","Osmanya",0x10480,0x104AF],
+  ["奥色治字母","Osage",0x104B0,0x104FF],
+  ["埃尔巴桑字母","Elbasan",0x10500,0x1052F],
+  ["高加索阿尔巴尼亚字母","Caucasian Albanian",0x10530,0x1056F],
+  ["维特库齐字母","Vithkuqi",0x10570,0x105BF],
+  ["托德里字母","Todhri",0x105C0,0x105FF],
+  ["线形文字A","Linear A",0x10600,0x1077F],
+  ["拉丁扩展-F","Latin Extended-F",0x10780,0x107BF],
+  ["塞浦路斯音节文字","Cypriot Syllabary",0x10800,0x1083F],
+  ["帝国亚拉姆字母","Imperial Aramaic",0x10840,0x1085F],
+  ["帕尔米拉字母","Palmyrene",0x10860,0x1087F],
+  ["纳巴泰字母","Nabataean",0x10880,0x108AF],
+  ["哈特兰字母","Hatran",0x108E0,0x108FF],
+  ["腓尼基字母","Phoenician",0x10900,0x1091F],
+  ["吕底亚字母","Lydian",0x10920,0x1093F],
+  ["西代字母","Sidetic",0x10940,0x1095F],
+  ["麦罗埃象形文字","Meroitic Hieroglyphs",0x10980,0x1099F],
+  ["麦罗埃草书","Meroitic Cursive",0x109A0,0x109FF],
+  ["佉卢字母","Kharoshthi",0x10A00,0x10A5F],
+  ["古南阿拉伯字母","Old South Arabian",0x10A60,0x10A7F],
+  ["古北阿拉伯字母","Old North Arabian",0x10A80,0x10A9F],
+  ["摩尼字母","Manichaean",0x10AC0,0x10AFF],
+  ["阿维斯陀字母","Avestan",0x10B00,0x10B3F],
+  ["碑铭帕提亚字母","Inscriptional Parthian",0x10B40,0x10B5F],
+  ["碑铭帕拉维字母","Inscriptional Pahlavi",0x10B60,0x10B7F],
+  ["诗篇帕拉维字母","Psalter Pahlavi",0x10B80,0x10BAF],
+  ["古突厥字母","Old Turkic",0x10C00,0x10C4F],
+  ["古匈牙利字母","Old Hungarian",0x10C80,0x10CFF],
+  ["哈尼菲罗兴亚字母","Hanifi Rohingya",0x10D00,0x10D3F],
+  ["加赖字母","Garay",0x10D40,0x10D8F],
+  ["鲁米数字符号","Rumi Numeral Symbols",0x10E60,0x10E7F],
+  ["雅兹迪字母","Yezidi",0x10E80,0x10EBF],
+  ["阿拉伯字母扩展-C","Arabic Extended-C",0x10EC0,0x10EFF],
+  ["古粟特字母","Old Sogdian",0x10F00,0x10F2F],
+  ["粟特字母","Sogdian",0x10F30,0x10F6F],
+  ["古回鹘字母","Old Uyghur",0x10F70,0x10FAF],
+  ["花剌子模字母","Chorasmian",0x10FB0,0x10FDF],
+  ["埃利迈斯字母","Elymaic",0x10FE0,0x10FFF],
+  ["婆罗米字母","Brahmi",0x11000,0x1107F],
+  ["凯提字母","Kaithi",0x11080,0x110CF],
+  ["索拉桑彭字母","Sora Sompeng",0x110D0,0x110FF],
+  ["查克玛字母","Chakma",0x11100,0x1114F],
+  ["马哈贾尼字母","Mahajani",0x11150,0x1117F],
+  ["夏拉达字母","Sharada",0x11180,0x111DF],
+  ["僧伽罗古代数字","Sinhala Archaic Numbers",0x111E0,0x111FF],
+  ["霍吉基字母","Khojki",0x11200,0x1124F],
+  ["穆尔坦字母","Multani",0x11280,0x112AF],
+  ["库达瓦迪字母","Khudawadi",0x112B0,0x112FF],
+  ["葛兰塔字母","Grantha",0x11300,0x1137F],
+  ["图卢-蒂加拉里字母","Tulu-Tigalari",0x11380,0x113FF],
+  ["内瓦字母","Newa",0x11400,0x1147F],
+  ["提尔胡塔字母","Tirhuta",0x11480,0x114DF],
+  ["悉昙字母","Siddham",0x11580,0x115FF],
+  ["莫迪字母","Modi",0x11600,0x1165F],
+  ["蒙古文字母补充","Mongolian Supplement",0x11660,0x1167F],
+  ["塔克里字母","Takri",0x11680,0x116CF],
+  ["缅甸文字母扩展-C","Myanmar Extended-C",0x116D0,0x116FF],
+  ["阿洪姆字母","Ahom",0x11700,0x1174F],
+  ["多格拉字母","Dogra",0x11800,0x1184F],
+  ["瓦兰齐地字母","Warang Citi",0x118A0,0x118FF],
+  ["迪韦希阿库鲁字母","Dives Akuru",0x11900,0x1195F],
+  ["南迪那伽里字母","Nandinagari",0x119A0,0x119FF],
+  ["扎那巴扎尔方体字母","Zanabazar Square",0x11A00,0x11A4F],
+  ["索永布字母","Soyombo",0x11A50,0x11AAF],
+  ["统一加拿大原住民音节扩展-A","Unified Canadian Aboriginal Syllabics Extended-A",0x11AB0,0x11ABF],
+  ["鲍钦侯字母","Pau Cin Hau",0x11AC0,0x11AFF],
+  ["天城文字母扩展-A","Devanagari Extended-A",0x11B00,0x11B5F],
+  ["夏拉达字母补充","Sharada Supplement",0x11B60,0x11B7F],
+  ["苏努瓦尔字母","Sunuwar",0x11BC0,0x11BFF],
+  ["拜克舒基字母","Bhaiksuki",0x11C00,0x11C6F],
+  ["玛尔钦字母","Marchen",0x11C70,0x11CBF],
+  ["马萨拉姆贡德字母","Masaram Gondi",0x11D00,0x11D5F],
+  ["贡贾拉贡德字母","Gunjala Gondi",0x11D60,0x11DAF],
+  ["托隆西基字母","Tolong Siki",0x11DB0,0x11DEF],
+  ["望加锡字母","Makasar",0x11EE0,0x11EFF],
+  ["卡维字母","Kawi",0x11F00,0x11F5F],
+  ["傈僳字母补充","Lisu Supplement",0x11FB0,0x11FBF],
+  ["泰米尔字母补充","Tamil Supplement",0x11FC0,0x11FFF],
+  ["楔形文字","Cuneiform",0x12000,0x123FF],
+  ["楔形文字数字和标点","Cuneiform Numbers and Punctuation",0x12400,0x1247F],
+  ["早王朝楔形文字","Early Dynastic Cuneiform",0x12480,0x1254F],
+  ["塞浦路斯-米诺斯文字","Cypro-Minoan",0x12F90,0x12FFF],
+  ["埃及象形文字","Egyptian Hieroglyphs",0x13000,0x1342F],
+  ["埃及象形文字格式控制符","Egyptian Hieroglyph Format Controls",0x13430,0x1345F],
+  ["埃及象形文字扩展-A","Egyptian Hieroglyphs Extended-A",0x13460,0x143FF],
+  ["安纳托利亚象形文字","Anatolian Hieroglyphs",0x14400,0x1467F],
+  ["古隆克玛字母","Gurung Khema",0x16100,0x1613F],
+  ["巴姆穆字母补充","Bamum Supplement",0x16800,0x16A3F],
+  ["姆鲁字母","Mro",0x16A40,0x16A6F],
+  ["唐萨字母","Tangsa",0x16A70,0x16ACF],
+  ["巴萨瓦字母","Bassa Vah",0x16AD0,0x16AFF],
+  ["帕哈苗文","Pahawh Hmong",0x16B00,0x16B8F],
+  ["基拉特拉伊字母","Kirat Rai",0x16D40,0x16D7F],
+  ["梅德法伊德林字母","Medefaidrin",0x16E40,0x16E9F],
+  ["贝里亚埃尔费字母","Beria Erfe",0x16EA0,0x16EDF],
+  ["苗文","Miao",0x16F00,0x16F9F],
+  ["表意符号和标点","Ideographic Symbols and Punctuation",0x16FE0,0x16FFF],
+  ["西夏文","Tangut",0x17000,0x187FF],
+  ["西夏文部件","Tangut Components",0x18800,0x18AFF],
+  ["契丹小字","Khitan Small Script",0x18B00,0x18CFF],
+  ["西夏文补充","Tangut Supplement",0x18D00,0x18D7F],
+  ["西夏文部件补充","Tangut Components Supplement",0x18D80,0x18DFF],
+  ["假名扩展-B","Kana Extended-B",0x1AFF0,0x1AFFF],
+  ["假名补充","Kana Supplement",0x1B000,0x1B0FF],
+  ["假名扩展-A","Kana Extended-A",0x1B100,0x1B12F],
+  ["小假名扩展","Small Kana Extension",0x1B130,0x1B16F],
+  ["女书","Nushu",0x1B170,0x1B2FF],
+  ["杜普洛耶速记","Duployan",0x1BC00,0x1BC9F],
+  ["速记格式控制符","Shorthand Format Controls",0x1BCA0,0x1BCAF],
+  ["早期计算符号补充","Symbols for Legacy Computing Supplement",0x1CC00,0x1CEBF],
+  ["杂项符号补充","Miscellaneous Symbols Supplement",0x1CEC0,0x1CEFF],
+  ["赞美诗记谱法","Znamenny Musical Notation",0x1CF00,0x1CFCF],
+  ["拜占庭音乐符号","Byzantine Musical Symbols",0x1D000,0x1D0FF],
+  ["音乐符号","Musical Symbols",0x1D100,0x1D1FF],
+  ["古希腊音乐记谱法","Ancient Greek Musical Notation",0x1D200,0x1D24F],
+  ["卡克托维克数字","Kaktovik Numerals",0x1D2C0,0x1D2DF],
+  ["玛雅数字","Mayan Numerals",0x1D2E0,0x1D2FF],
+  ["太玄经符号","Tai Xuan Jing Symbols",0x1D300,0x1D35F],
+  ["算筹数字","Counting Rod Numerals",0x1D360,0x1D37F],
+  ["数学字母数字符号","Mathematical Alphanumeric Symbols",0x1D400,0x1D7FF],
+  ["萨顿手语书写","Sutton SignWriting",0x1D800,0x1DAAF],
+  ["拉丁扩展-G","Latin Extended-G",0x1DF00,0x1DFFF],
+  ["格拉哥里字母补充","Glagolitic Supplement",0x1E000,0x1E02F],
+  ["西里尔字母扩展-D","Cyrillic Extended-D",0x1E030,0x1E08F],
+  ["恩江普埃苗文","Nyiakeng Puachue Hmong",0x1E100,0x1E14F],
+  ["托托字母","Toto",0x1E290,0x1E2BF],
+  ["万乔字母","Wancho",0x1E2C0,0x1E2FF],
+  ["纳格蒙达里字母","Nag Mundari",0x1E4D0,0x1E4FF],
+  ["奥尔奥纳尔字母","Ol Onal",0x1E5D0,0x1E5FF],
+  ["傣约字母","Tai Yo",0x1E6C0,0x1E6FF],
+  ["埃塞俄比亚字母扩展-B","Ethiopic Extended-B",0x1E7E0,0x1E7FF],
+  ["门德基卡奎字母","Mende Kikakui",0x1E800,0x1E8DF],
+  ["阿德拉姆字母","Adlam",0x1E900,0x1E95F],
+  ["印度西亚克数字","Indic Siyaq Numbers",0x1EC70,0x1ECBF],
+  ["奥斯曼西亚克数字","Ottoman Siyaq Numbers",0x1ED00,0x1ED4F],
+  ["阿拉伯数学字母符号","Arabic Mathematical Alphabetic Symbols",0x1EE00,0x1EEFF],
+  ["麻将牌","Mahjong Tiles",0x1F000,0x1F02F],
+  ["多米诺骨牌","Domino Tiles",0x1F030,0x1F09F],
+  ["扑克牌","Playing Cards",0x1F0A0,0x1F0FF],
+  ["封闭字母数字补充","Enclosed Alphanumeric Supplement",0x1F100,0x1F1FF],
+  ["封闭表意文字补充","Enclosed Ideographic Supplement",0x1F200,0x1F2FF],
   ["杂项符号和象形文字","Miscellaneous Symbols and Pictographs",0x1F300,0x1F5FF],
   ["表情符号","Emoticons",0x1F600,0x1F64F],
+  ["装饰性叮当符号","Ornamental Dingbats",0x1F650,0x1F67F],
   ["交通和地图符号","Transport and Map Symbols",0x1F680,0x1F6FF],
-  ["补充符号","Supplemental Symbols",0x1F900,0x1F9FF],
-  ["棋类符号","Chess Symbols",0x1FA00,0x1FA6F],
+  ["炼金术符号","Alchemical Symbols",0x1F700,0x1F77F],
+  ["几何图形扩展","Geometric Shapes Extended",0x1F780,0x1F7FF],
+  ["补充箭头-C","Supplemental Arrows-C",0x1F800,0x1F8FF],
+  ["补充符号和象形文字","Supplemental Symbols and Pictographs",0x1F900,0x1F9FF],
+  ["国际象棋符号","Chess Symbols",0x1FA00,0x1FA6F],
   ["符号和象形文字扩展-A","Symbols and Pictographs Extended-A",0x1FA70,0x1FAFF],
+  ["早期计算符号","Symbols for Legacy Computing",0x1FB00,0x1FBFF],
+  ["CJK统一表意文字扩展B","CJK Unified Ideographs Extension B",0x20000,0x2A6DF],
+  ["CJK统一表意文字扩展C","CJK Unified Ideographs Extension C",0x2A700,0x2B73F],
+  ["CJK统一表意文字扩展D","CJK Unified Ideographs Extension D",0x2B740,0x2B81F],
+  ["CJK统一表意文字扩展E","CJK Unified Ideographs Extension E",0x2B820,0x2CEAF],
+  ["CJK统一表意文字扩展F","CJK Unified Ideographs Extension F",0x2CEB0,0x2EBEF],
+  ["CJK统一表意文字扩展I","CJK Unified Ideographs Extension I",0x2EBF0,0x2EE5F],
+  ["CJK兼容表意文字补充","CJK Compatibility Ideographs Supplement",0x2F800,0x2FA1F],
+  ["CJK统一表意文字扩展G","CJK Unified Ideographs Extension G",0x30000,0x3134F],
+  ["CJK统一表意文字扩展H","CJK Unified Ideographs Extension H",0x31350,0x323AF],
+  ["CJK统一表意文字扩展J","CJK Unified Ideographs Extension J",0x323B0,0x3347F],
+  ["标签","Tags",0xE0000,0xE007F],
+  ["变体选择符补充","Variation Selectors Supplement",0xE0100,0xE01EF],
+  ["补充专用区-A","Supplementary Private Use Area-A",0xF0000,0xFFFFF],
+  ["补充专用区-B","Supplementary Private Use Area-B",0x100000,0x10FFFF],
 ];
 
 // 区块英文名→中文名映射（用于加载外部数据时翻译）
@@ -1112,7 +1402,7 @@ const EMOJI_RANGES = [
 
 // 语言文字分区（随机摇字 + 收藏分组共用）
 const LANG_PARTITIONS = [
-  ['zh',   '中文',              [[0x4E00,0x9FFF],[0x3400,0x4DBF],[0x20000,0x2A6DF],[0x2A700,0x2B73F],[0x2B740,0x2B81F],[0x2B820,0x2CEAF],[0x2CEB0,0x2EBEF],[0x30000,0x3134F],[0x31350,0x323AF],[0xF900,0xFAFF],[0x2F800,0x2FA1F],[0x2E80,0x2EFF],[0x2F00,0x2FDF],[0x31C0,0x31EF],[0x3100,0x312F],[0x31A0,0x31BF],[0x3000,0x303F]]],
+  ['zh',   '中文',              [[0x4E00,0x9FFF],[0x3400,0x4DBF],[0x20000,0x2A6DF],[0x2A700,0x2B73F],[0x2B740,0x2B81F],[0x2B820,0x2CEAF],[0x2CEB0,0x2EBEF],[0x2EBF0,0x2EE5F],[0x30000,0x3134F],[0x31350,0x323AF],[0x323B0,0x3347F],[0xF900,0xFAFF],[0x2F800,0x2FA1F],[0x2E80,0x2EFF],[0x2F00,0x2FDF],[0x31C0,0x31EF],[0x3100,0x312F],[0x31A0,0x31BF],[0x3000,0x303F]]],
   ['en',   '英文（拉丁字母）',   [[0x0020,0x007E],[0x00A0,0x00FF],[0x0100,0x017F],[0x0180,0x024F],[0x1E00,0x1EFF]]],
   ['ja',   '日文',              [[0x3040,0x309F],[0x30A0,0x30FF],[0x3000,0x303F],[0x4E00,0x9FFF],[0xFF00,0xFFEF]]],
   ['ko',   '韩文',              [[0xAC00,0xD7AF],[0x1100,0x11FF],[0x3130,0x318F],[0xFF00,0xFFEF]]],
@@ -2419,7 +2709,7 @@ const IDB_STORE = 'data';
 
 // 全局 Unicode 数据对象
 let unicodeData = {
-  version: '内置 (简化版)',
+  version: '内置 (Unicode 17.0 区块)',
   source: 'builtin',
   blocks: null,        // [[enName, start, end], ...]  来自外部 Blocks.txt
   charMap: null,       // Map: codepoint → {name, category, bidi, combining, decomposition, mirrored, upper, lower}
@@ -2591,17 +2881,19 @@ async function resetUnicodeData() {
 
 // 清空所有个人数据（收藏/字义/浏览记录/最近搜索）
 async function clearAllUserData() {
-  const step1 = confirm('⚠️ 确定清空所有个人数据？\n\n将清除以下内容：\n• 我的收藏\n• 自定义字义\n• 浏览记录\n• 最近搜索\n• 管理 PIN 码');
+  const step1 = confirm('⚠️ 确定清空所有个人数据？\n\n将清除以下内容：\n• 我的收藏\n• 自定义字义\n• 自定义字典\n• 浏览记录\n• 最近搜索\n• 管理 PIN 码');
   if (!step1) return;
   const step2 = confirm('❗ 二次确认\n\n此操作不可撤销，所有个人数据将永久丢失！\n\n如需保留，请先在设置中"导出个人数据"备份。\n\n确定继续吗？');
   if (!step2) return;
   favorites.clear();
   customMeanings = {};
+  customWordDict = {};
   history.length = 0;
   recentSearches = [];
   try {
     localStorage.removeItem('unicode_favorites');
     localStorage.removeItem('unicode_custom_meanings');
+    localStorage.removeItem('unicode_custom_word_dict');
     localStorage.removeItem('unicode_history');
     localStorage.removeItem('recentSearches');
     localStorage.removeItem('managePin');
@@ -2618,10 +2910,11 @@ async function clearAllUserData() {
 function exportUserData() {
   const data = {
     _type: 'unicode-app-user-data',
-    _version: 1,
+    _version: 2,
     _exportedAt: new Date().toISOString(),
     favorites: [...favorites],
     customMeanings: customMeanings,
+    customWordDict: customWordDict,
     history: history,
     recentSearches: recentSearches,
   };
@@ -2654,6 +2947,7 @@ function importUserData(event) {
       const ok = confirm('即将导入个人数据，将覆盖当前数据。\n\n导入内容：\n'
         + `• 收藏: ${data.favorites?.length || 0} 项\n`
         + `• 自定义字义: ${Object.keys(data.customMeanings || {}).length} 条\n`
+        + `• 自定义字典: ${Object.keys(data.customWordDict || {}).length} 条\n`
         + `• 浏览记录: ${data.history?.length || 0} 条\n`
         + `• 最近搜索: ${data.recentSearches?.length || 0} 条\n\n`
         + '确定继续？');
@@ -2667,6 +2961,10 @@ function importUserData(event) {
       if (data.customMeanings && typeof data.customMeanings === 'object') {
         customMeanings = data.customMeanings;
         try { localStorage.setItem('unicode_custom_meanings', JSON.stringify(customMeanings)); } catch(e) {}
+      }
+      if (data.customWordDict && typeof data.customWordDict === 'object') {
+        customWordDict = data.customWordDict;
+        try { localStorage.setItem('unicode_custom_word_dict', JSON.stringify(customWordDict)); } catch(e) {}
       }
       if (Array.isArray(data.history)) {
         history.length = 0;
@@ -2755,7 +3053,8 @@ function parseUCD(text) {
 function generateRangeName(rangeType, cp) {
   const hex = cp.toString(16).toUpperCase().padStart(4, '0');
   const t = rangeType.toUpperCase();
-  if (t.includes('CJK UNIFIED IDEOGRAPH')) return `CJK UNIFIED IDEOGRAPH-${hex}`;
+  if (t.includes('CJK IDEOGRAPH EXTENSION')) return `CJK UNIFIED IDEOGRAPH ${t.replace('CJK IDEOGRAPH','').trim()}-${hex}`;
+  if (t.includes('CJK IDEOGRAPH')) return `CJK UNIFIED IDEOGRAPH-${hex}`;
   if (t.includes('CJK COMPATIBILITY IDEOGRAPH')) return `CJK COMPATIBILITY IDEOGRAPH-${hex}`;
   if (t.includes('HANGUL SYLLABLE')) return `HANGUL SYLLABLE ${hex}`;
   if (t.includes('TANGUT')) return `TANGUT IDEOGRAPH-${hex}`;
@@ -3097,6 +3396,17 @@ function getCharName(cp) {
   if (cp >= 0x4E00 && cp <= 0x9FFF) return `CJK UNIFIED IDEOGRAPH-${cp.toString(16).toUpperCase()}`;
   if (cp >= 0xAC00 && cp <= 0xD7AF) return `HANGUL SYLLABLE ${cp.toString(16).toUpperCase()}`;
   if (cp >= 0x3400 && cp <= 0x4DBF) return `CJK UNIFIED IDEOGRAPH EXTENSION A-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x20000 && cp <= 0x2A6DF) return `CJK UNIFIED IDEOGRAPH EXTENSION B-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x2A700 && cp <= 0x2B73F) return `CJK UNIFIED IDEOGRAPH EXTENSION C-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x2B740 && cp <= 0x2B81F) return `CJK UNIFIED IDEOGRAPH EXTENSION D-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x2B820 && cp <= 0x2CEAF) return `CJK UNIFIED IDEOGRAPH EXTENSION E-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x2CEB0 && cp <= 0x2EBEF) return `CJK UNIFIED IDEOGRAPH EXTENSION F-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x2EBF0 && cp <= 0x2EE5F) return `CJK UNIFIED IDEOGRAPH EXTENSION I-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x30000 && cp <= 0x3134F) return `CJK UNIFIED IDEOGRAPH EXTENSION G-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x31350 && cp <= 0x323AF) return `CJK UNIFIED IDEOGRAPH EXTENSION H-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x323B0 && cp <= 0x3347F) return `CJK UNIFIED IDEOGRAPH EXTENSION J-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0xF900 && cp <= 0xFAFF) return `CJK COMPATIBILITY IDEOGRAPH-${cp.toString(16).toUpperCase()}`;
+  if (cp >= 0x2F800 && cp <= 0x2FA1F) return `CJK COMPATIBILITY IDEOGRAPH SUPPLEMENT-${cp.toString(16).toUpperCase()}`;
   if (cp >= 0x0370 && cp <= 0x03FF) return `GREEK LETTER ${cp.toString(16).toUpperCase()}`;
   if (cp >= 0x0400 && cp <= 0x04FF) return `CYRILLIC LETTER ${cp.toString(16).toUpperCase()}`;
   if (cp >= 0x0020 && cp <= 0x007E) {
@@ -4646,7 +4956,7 @@ function renderSettingsBody() {
   const charCount = unicodeData.charMap ? unicodeData.charMap.size : '—';
   const blockCount = unicodeData.blocks ? unicodeData.blocks.length : BLOCKS.length;
   const sourceText = {
-    'builtin': '内置数据（简化版）',
+    'builtin': '内置数据（Unicode 17.0 区块）',
     'file': '本地文件上传',
     'stored': '本地缓存',
   }[unicodeData.source] || unicodeData.source;
@@ -4676,21 +4986,22 @@ function renderSettingsBody() {
       <h3>📁 从文件更新</h3>
       <p>如果无法访问 CDN，可从 Unicode 官方网站手动下载以下两个文件并上传：</p>
       <div style="background:var(--bg);border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13px;line-height:1.8;border:1px solid var(--border)">
-        <div style="margin-bottom:6px"><b>📄 文件 1：UnicodeData.txt</b></div>
+        <div style="margin-bottom:6px"><b>📄 文件 1：UnicodeData.txt</b> <span style="font-size:12px;color:var(--accent)">（Unicode 17.0.0）</span></div>
         <div style="margin-left:16px">
-          <div>直接下载链接：</div>
-          <div style="margin:4px 0"><a href="https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt</a></div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px">说明：包含所有字符的名称、类别、大小写映射、双向属性等。文件较大（约 2 MB）。</div>
+          <div>直接下载链接（右键另存为）：</div>
+          <div style="margin:4px 0"><a href="https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt</a></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">说明：包含所有字符的名称、类别、大小写映射、双向属性等。文件约 2.1 MB，包含 159,801 个字符。</div>
         </div>
-        <div style="margin:10px 0 6px"><b>📄 文件 2：Blocks.txt</b></div>
+        <div style="margin:10px 0 6px"><b>📄 文件 2：Blocks.txt</b> <span style="font-size:12px;color:var(--accent)">（Unicode 17.0.0）</span></div>
         <div style="margin-left:16px">
-          <div>直接下载链接：</div>
-          <div style="margin:4px 0"><a href="https://www.unicode.org/Public/UCD/latest/ucd/Blocks.txt" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/UCD/latest/ucd/Blocks.txt</a></div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px">说明：定义 Unicode 区块名称与起止码点。文件小（约 10 KB）。</div>
+          <div>直接下载链接（右键另存为）：</div>
+          <div style="margin:4px 0"><a href="https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt</a></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">说明：定义 Unicode 17.0 全部 346 个区块名称与起止码点。文件约 11 KB。</div>
         </div>
         <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);font-size:12px;color:var(--muted)">
           📂 备用入口（含所有 UCD 文件）：<br>
-          <a href="https://www.unicode.org/Public/UCD/latest/ucd/" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/UCD/latest/ucd/</a>
+          <a href="https://www.unicode.org/Public/17.0.0/ucd/" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/17.0.0/ucd/</a><br>
+          <span style="margin-top:4px;display:inline-block">🔢 当前最新版本：<a href="https://www.unicode.org/Public/UCD/latest/ucd/" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/UCD/latest/ucd/</a>（自动跳转最新版）</span>
         </div>
       </div>
       <div class="settings-actions">
@@ -4743,13 +5054,13 @@ function renderSettingsBody() {
 
     <div class="settings-section">
       <h3>↩️ Unicode 数据重置</h3>
-      <p>清除已下载/上传的 Unicode 数据，恢复为内置简化版数据。</p>
+      <p>清除已下载/上传的 Unicode 数据，恢复为内置 Unicode 17.0 区块数据。</p>
       <button class="settings-reset-btn" onclick="resetUnicodeData()">恢复内置数据</button>
     </div>
 
     <div class="settings-section">
       <h3>ℹ️ 关于</h3>
-      <p>本工具基于 Unicode Character Database (UCD) 提供字符查询、浏览和收藏功能。内置数据为简化版，包含基本区块定义和常见字符名称。上传完整数据后可获得所有字符的名称、类别、双向属性等信息。</p>
+      <p>本工具基于 Unicode Character Database (UCD) 提供字符查询、浏览和收藏功能。内置数据包含 Unicode 17.0 全部 346 个区块定义。上传完整 UnicodeData.txt 后可获得所有字符的名称、类别、双向属性等详细信息。</p>
     </div>
   `;
 }
