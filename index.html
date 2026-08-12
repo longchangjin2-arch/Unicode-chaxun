@@ -753,47 +753,154 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
 @media (max-width: 768px) {
   :root { --cell-size: 44px; }
   body { flex-direction: column; }
+  /* 侧边栏横向滚动条 */
   .sidebar {
     width: 100%; min-width: 100%;
-    padding: 8px 8px;
+    padding: 6px 6px;
     border-right: none; border-bottom: 1px solid var(--border);
-    flex-direction: row; flex-wrap: wrap;
+    flex-direction: row; flex-wrap: nowrap;
     gap: 4px; overflow-x: auto; overflow-y: hidden;
-    max-height: 120px;
+    max-height: 52px;
+    -webkit-overflow-scrolling: touch;
+    position: sticky; top: 0; z-index: 50;
+    background: var(--card);
   }
+  .sidebar::-webkit-scrollbar { height: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   .sidebar h2 { display: none; }
   .sidebar .nav-btn {
-    width: auto; min-width: 80px;
+    width: auto; min-width: auto;
     padding: 8px 12px; font-size: 13px;
-    white-space: nowrap;
+    white-space: nowrap; flex-shrink: 0;
   }
   .sidebar .sep { display: none; }
   .sidebar .theme-toggle { display: none; }
   .sidebar .fav-count { display: none; }
-  .sidebar .unicode-version { display: none; }
-  .main { padding: 140px 10px 10px; }
-  .main-header h1 { font-size: 16px; }
-  .modal { width: 95vw; max-width: 95vw; }
+  .sidebar .unicode-version {
+    display: block; padding: 8px 12px; font-size: 11px; flex-shrink: 0;
+  }
+  /* 主内容区 - 移除了顶部固定搜索栏的 padding */
+  .main { padding: 10px 10px 16px; }
+  .main-header { margin-bottom: 8px; }
+  .main-header h1 { font-size: 17px; }
+  /* 模态框 */
+  .modal {
+    width: 96vw; max-width: 96vw;
+    max-height: 92vh; border-radius: 12px;
+  }
+  .modal.wide { width: 96vw; max-width: 96vw; }
+  .modal-header { padding: 14px 14px 0; }
   .modal-header .big-char { font-size: 56px; }
-  .modal-body { padding: 12px 16px; }
-  .modal-footer { padding: 10px 16px 16px; }
-  .modal-footer button { padding: 6px 12px; font-size: 12px; }
-  .control-bar { flex-direction: column; align-items: stretch; }
-  .control-bar select, .control-bar input[type="number"] { width: 100%; }
+  .modal-header .name { font-size: 15px; }
+  .modal-body { padding: 12px 14px; }
+  .modal-section { margin-bottom: 12px; }
+  .modal-section h3 { font-size: 14px; }
+  .modal-row {
+    font-size: 12px; padding: 5px 0;
+    flex-wrap: wrap; gap: 2px 8px;
+  }
+  .modal-row .label { min-width: 76px; font-size: 11px; }
+  .modal-row .value {
+    text-align: left; flex: 1 1 100%;
+    font-size: 12px; word-break: break-all; line-height: 1.5;
+  }
+  .modal-footer {
+    padding: 10px 14px 14px;
+    gap: 6px;
+  }
+  .modal-footer button { padding: 8px 14px; font-size: 13px; flex: 1 1 auto; }
+  .modal-close {
+    top: 6px; right: 6px;
+    width: 32px; height: 32px;
+    font-size: 22px; line-height: 28px;
+  }
+  /* 控制栏 */
+  .control-bar {
+    flex-direction: row; flex-wrap: wrap; align-items: center;
+    gap: 6px; padding: 6px 0;
+  }
+  .control-bar select, .control-bar input[type="number"] {
+    width: auto; min-width: 0; flex: 1 1 120px;
+  }
+  .control-bar .ctrl-label { font-size: 12px; }
+  .control-bar button { padding: 6px 12px; font-size: 13px; }
+  /* 字符网格 */
+  .grid { gap: 4px; }
+  .cell .cp { font-size: 9px; }
+  /* 搜索页 */
+  .search-page { padding: 12px 0; max-width: 100%; }
+  .search-page .sp-title { font-size: 19px; }
+  .search-page .sp-box input { font-size: 15px; padding: 10px 12px; }
+  .search-page .sp-box button { padding: 10px 16px; font-size: 14px; white-space: nowrap; }
+  .search-page .sp-modes { gap: 4px; }
+  .search-page .sp-mode { padding: 5px 10px; font-size: 11px; }
+  .search-page .sp-hint { font-size: 11px; padding: 10px 12px; }
+  .search-page .sp-hint code { font-size: 11px; }
+  /* 工具页（对比/批量） */
+  .tool-page { max-width: 100%; padding: 12px 0; }
+  .tool-page .tp-title { font-size: 18px; }
+  .tool-page .tp-row { gap: 6px; }
+  .tool-page .tp-row input[type=text] { font-size: 15px; min-width: 0; flex: 1 1 100%; }
+  .tool-page .tp-btn { padding: 9px 16px; font-size: 13px; flex: 1; }
+  .tool-page textarea { font-size: 15px; }
+  /* 对比结果 */
+  .compare-header {
+    grid-template-columns: 1fr 36px 1fr; padding: 12px;
+  }
+  .compare-char-big { font-size: 48px; }
+  .compare-vs { font-size: 18px; }
+  .compare-detail { padding: 10px 12px; }
+  .compare-detail table { font-size: 12px; }
+  .compare-detail th { width: 70px; font-size: 11px; }
+  .compare-detail td { padding: 5px 6px; }
+  .compare-detail td code { font-size: 11px; word-break: break-all; }
+  /* 批量解析表格 */
+  .batch-table-wrap { max-height: 400px; }
+  .batch-toolbar { gap: 6px; }
+  .batch-toolbar select { font-size: 12px; padding: 4px 6px; }
+  .batch-export-btn { width: 100%; margin: 6px 0 0; }
+  /* 设置面板 */
+  .settings-panel { width: 96vw; max-width: 96vw; }
+  .settings-section { padding: 12px; }
+  .settings-section h3 { font-size: 15px; }
+  .settings-section a { word-break: break-all; }
+  .settings-actions { flex-direction: column; gap: 6px; }
+  .settings-actions .file-upload-btn, .settings-actions button {
+    width: 100%; text-align: center; padding: 10px; font-size: 14px;
+  }
+  /* 放大预览 */
+  #zoomCanvas {
+    width: 90vw !important; height: 90vw !important;
+    max-width: 360px; max-height: 360px;
+  }
+  /* 收藏分组 */
+  .fav-group-header { padding: 10px 8px; }
+  .toggle-btn { padding: 6px 10px; font-size: 12px; }
+  /* 分页 */
+  #pagination button { padding: 6px 12px; font-size: 12px; }
 }
 
 @media (max-width: 480px) {
-  :root { --cell-size: 38px; }
-  .search-page .sp-box { flex-direction: column; }
+  :root { --cell-size: 36px; }
+  .search-page .sp-box { flex-direction: column; gap: 6px; }
   .search-page .sp-box button { width: 100%; }
-  .main-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .main-header { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .main-header h1 { font-size: 16px; }
   .cell .ch { font-size: 18px; }
-  .modal { max-height: 90vh; }
+  .cell .cp { font-size: 8px; }
+  .modal { max-height: 94vh; border-radius: 10px; }
+  .modal-header .big-char { font-size: 48px; }
   .modal-section h3 { font-size: 13px; }
-  .modal-row { font-size: 12px; }
-  .modal-row .label { min-width: 80px; }
+  .compare-char-big { font-size: 40px; }
+  .compare-header { grid-template-columns: 1fr 30px 1fr; }
+  /* 详情弹窗底部按钮 2 列 */
+  .modal-footer { flex-wrap: wrap; }
+  .modal-footer button { flex: 1 1 45%; }
+  /* 放大预览导出按钮 2x2 */
+  .modal-body > div:last-child > button {
+    flex: 1 1 45% !important; padding: 8px 10px !important; font-size: 12px !important;
+  }
 }
-body.dark .file-upload-btn { background: var(--accent); color: #1a1a2e; }
 </style>
 </head>
 <body>
