@@ -287,11 +287,17 @@ body.dark .batch-table .tag-sur { background: #4527a0; color: #ede7f6; }
 .sidebar .fav-count {
   padding: 0 8px; font-size: 12px; color: var(--muted);
 }
-.sidebar .unicode-version {
-  padding: 4px 8px 0; font-size: 11px; color: var(--muted);
-  cursor: pointer; transition: color .15s;
+.sidebar .settings-btn {
+  width: 36px; height: 36px; margin: 4px auto 0;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 50%; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s; color: var(--muted);
 }
-.sidebar .unicode-version:hover { color: var(--accent); }
+.sidebar .settings-btn:hover {
+  color: var(--accent); border-color: var(--accent);
+  transform: rotate(45deg);
+}
 
 /* ===== 主内容区 ===== */
 .main {
@@ -589,6 +595,7 @@ body.dark .modal-header .big-char.invisible-marker { background: rgba(0,0,0,0.3)
   display: flex; align-items: center; justify-content: center;
   gap: 12px; padding: 12px 0; flex-shrink: 0;
 }
+.pagination:empty { display: none; }
 .pagination button {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 8px; padding: 6px 16px;
@@ -777,8 +784,8 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
   .sidebar .sep { display: none; }
   .sidebar .theme-toggle { display: none; }
   .sidebar .fav-count { display: none; }
-  .sidebar .unicode-version {
-    display: block; padding: 8px 12px; font-size: 11px; flex-shrink: 0;
+  .sidebar .settings-btn {
+    display: flex; width: 32px; height: 32px; margin: 4px 4px 0; flex-shrink: 0;
   }
   /* 主内容区 - 移除了顶部固定搜索栏的 padding */
   .main { padding: 10px 10px 16px; }
@@ -924,7 +931,7 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
     <label for="themeSwitch">深色模式</label>
   </div>
   <div class="fav-count" id="favCount">收藏: 0 个</div>
-  <div class="unicode-version" id="sidebarVersion" onclick="showSettings()">Unicode: 内置 (17.0)</div>
+  <button class="settings-btn" onclick="showSettings()" title="设置">⚙️</button>
 </nav>
 
 <!-- 主内容 -->
@@ -2582,6 +2589,8 @@ let customMeanings = JSON.parse(localStorage.getItem('unicode_custom_meanings') 
 let customWordDict = JSON.parse(localStorage.getItem('unicode_custom_word_dict') || '{}');
 let manageMode = false;
 let history = JSON.parse(localStorage.getItem('unicode_history') || '[]');
+let favCategories = JSON.parse(localStorage.getItem('unicode_fav_categories') || '{}');
+// favCategories: { "分类名": [cp1, cp2, ...] }
 
 function saveHistory() {
   localStorage.setItem('unicode_history', JSON.stringify(history));
@@ -2598,6 +2607,152 @@ function clearHistory() {
   history = [];
   saveHistory();
   showToast('浏览记录已清除');
+}
+
+// ============================================================
+// 操作日志
+// ============================================================
+let appLogs = JSON.parse(localStorage.getItem('unicode_logs') || '[]');
+const MAX_LOGS = 200;
+
+function addLog(action, detail) {
+  const entry = {
+    time: new Date().toLocaleString('zh-CN', { hour12: false }),
+    action: action,
+    detail: detail || ''
+  };
+  appLogs.unshift(entry);
+  if (appLogs.length > MAX_LOGS) appLogs.length = MAX_LOGS;
+  try { localStorage.setItem('unicode_logs', JSON.stringify(appLogs)); } catch(e) {}
+}
+
+function clearLogs() {
+  appLogs = [];
+  try { localStorage.removeItem('unicode_logs'); } catch(e) {}
+  showToast('日志已清除');
+}
+
+function renderLogsHTML() {
+  if (!appLogs.length) return '<div style="text-align:center;color:var(--muted);padding:20px">暂无日志记录</div>';
+  let html = '';
+  for (const log of appLogs) {
+    html += `<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px dashed var(--border-light)">
+      <span style="color:var(--muted);white-space:nowrap;flex-shrink:0">${log.time}</span>
+      <span style="color:var(--accent);font-weight:bold;white-space:nowrap;flex-shrink:0">${log.action}</span>
+      <span style="color:var(--text);word-break:break-all">${log.detail}</span>
+    </div>`;
+  }
+  return html;
+}
+
+function renderLogsInSettings() {
+  const el = document.getElementById('logList');
+  if (el) el.innerHTML = renderLogsHTML();
+}
+
+// ============================================================
+// 收藏分类管理
+// ============================================================
+let favCategoryMode = 'all'; // 'all' | 'categories' | 'category:<name>'
+
+function saveFavCategories() {
+  try { localStorage.setItem('unicode_fav_categories', JSON.stringify(favCategories)); } catch(e) {}
+}
+
+function createFavCategory(name) {
+  if (!name || !name.trim()) { showToast('请输入分类名'); return false; }
+  name = name.trim();
+  if (favCategories[name]) { showToast('分类已存在'); return false; }
+  favCategories[name] = [];
+  saveFavCategories();
+  addLog('创建分类', name);
+  return true;
+}
+
+function deleteFavCategory(name) {
+  if (!favCategories[name]) return false;
+  if (!confirm(`确定删除分类"${name}"？该分类下的字符不会被取消收藏。`)) return false;
+  delete favCategories[name];
+  saveFavCategories();
+  addLog('删除分类', name);
+  return true;
+}
+
+function renameFavCategory(oldName, newName) {
+  if (!newName || !newName.trim()) { showToast('请输入新名称'); return false; }
+  newName = newName.trim();
+  if (favCategories[newName]) { showToast('分类名已存在'); return false; }
+  favCategories[newName] = favCategories[oldName];
+  delete favCategories[oldName];
+  saveFavCategories();
+  addLog('重命名分类', `${oldName} → ${newName}`);
+  return true;
+}
+
+function addCharToCategory(cp, categoryName) {
+  if (!favCategories[categoryName]) return false;
+  if (!favCategories[categoryName].includes(cp)) {
+    favCategories[categoryName].push(cp);
+    saveFavCategories();
+  }
+  return true;
+}
+
+function removeCharFromCategory(cp, categoryName) {
+  if (!favCategories[categoryName]) return;
+  favCategories[categoryName] = favCategories[categoryName].filter(c => c !== cp);
+  saveFavCategories();
+}
+
+function getCategoriesForChar(cp) {
+  const result = [];
+  for (const [name, cps] of Object.entries(favCategories)) {
+    if (cps.includes(cp)) result.push(name);
+  }
+  return result;
+}
+
+function openCategoryPicker(cp, ch) {
+  const existing = getCategoriesForChar(cp);
+  const allCategories = Object.keys(favCategories);
+  
+  let html = `<div style="margin-bottom:12px"><b>将 "${ch}" 加入分类：</b></div>`;
+  
+  if (!allCategories.length) {
+    html += '<div style="color:var(--muted);margin-bottom:12px">暂无分类，请先创建分类</div>';
+  } else {
+    for (const cat of allCategories) {
+      const checked = existing.includes(cat) ? 'checked' : '';
+      html += `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
+        <input type="checkbox" ${checked} onchange="toggleCharCategory(${cp}, '${cat.replace(/'/g, "\\'")}', this.checked)">
+        <span>${cat}</span>
+        <span style="color:var(--muted);font-size:12px">(${favCategories[cat].length} 个字符)</span>
+      </label>`;
+    }
+  }
+  
+  html += `<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
+    <input type="text" id="newCatInput" placeholder="新建分类名" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);box-sizing:border-box">
+    <button onclick="createAndAddCategory(${cp})" style="margin-top:8px;padding:6px 16px;border:none;border-radius:6px;background:var(--accent);color:white;cursor:pointer">+ 创建并加入</button>
+  </div>`;
+  
+  showModal('📁 加入分类', html, '', [{text:'完成',cls:'primary',action:'closeModal()'}]);
+}
+
+function toggleCharCategory(cp, categoryName, add) {
+  if (add) addCharToCategory(cp, categoryName);
+  else removeCharFromCategory(cp, categoryName);
+}
+
+function createAndAddCategory(cp) {
+  const input = document.getElementById('newCatInput');
+  const name = input ? input.value.trim() : '';
+  if (!name) { showToast('请输入分类名'); return; }
+  if (createFavCategory(name)) {
+    addCharToCategory(cp, name);
+    showToast(`已创建分类"${name}"并加入`);
+    openCategoryPicker(cp, safeChr(cp) || '?'); // refresh
+  }
 }
 
 function saveCustomMeanings() {
@@ -2810,6 +2965,7 @@ async function uploadUCDFile(event) {
     updateVersionDisplay();
     refreshSettingsDisplay();
     showToast('UnicodeData.txt 已加载');
+    addLog('上传数据', `UnicodeData.txt: ${charMap.size} 个字符`);
   } catch(e) {
     prog.className = 'update-progress error';
     prog.textContent = `❌ 解析失败: ${e.message}`;
@@ -2851,6 +3007,7 @@ async function uploadBlocksFile(event) {
     updateVersionDisplay();
     refreshSettingsDisplay();
     showToast('Blocks.txt 已加载');
+    addLog('上传数据', `Blocks.txt`);
   } catch(e) {
     prog.className = 'update-progress error';
     prog.textContent = `❌ 解析失败: ${e.message}`;
@@ -2860,13 +3017,13 @@ async function uploadBlocksFile(event) {
 
 // --- 恢复内置数据 ---
 async function resetUnicodeData() {
-  const step1 = confirm('⚠️ 确定恢复内置数据？\n\n已下载/上传的 Unicode 数据将被清除。');
+  const step1 = confirm('⚠️ 确定恢复内置数据？\n\n已下载/上传的 Unicode 数据将被清除。\n\n（个人数据不受影响：收藏、自定义字义、字典、浏览记录等均会保留）');
   if (!step1) return;
-  const step2 = confirm('❗ 二次确认\n\n此操作不可撤销，确定继续吗？');
+  const step2 = confirm('❗ 二次确认\n\n此操作仅清除 Unicode 字符数据，不会删除个人数据。确定继续吗？');
   if (!step2) return;
   await idbDel('unicodeData');
   unicodeData = {
-    version: '内置 (简化版)',
+    version: '内置 (Unicode 17.0 区块)',
     source: 'builtin',
     blocks: null,
     charMap: null,
@@ -2876,28 +3033,33 @@ async function resetUnicodeData() {
   updateVersionDisplay();
   refreshSettingsDisplay();
   document.getElementById('fileProgress').style.display = 'none';
-  showToast('已恢复内置数据');
+  showToast('已恢复内置数据（个人数据不受影响）');
+  addLog('恢复数据', '恢复内置 Unicode 数据');
 }
 
 // 清空所有个人数据（收藏/字义/浏览记录/最近搜索）
 async function clearAllUserData() {
-  const step1 = confirm('⚠️ 确定清空所有个人数据？\n\n将清除以下内容：\n• 我的收藏\n• 自定义字义\n• 自定义字典\n• 浏览记录\n• 最近搜索\n• 管理 PIN 码');
+  const step1 = confirm('⚠️ 确定清空所有个人数据？\n\n将清除以下内容：\n• 我的收藏\n• 自定义字义\n• 自定义字典\n• 收藏分类\n• 浏览记录\n• 最近搜索\n• 管理 PIN 码\n• 操作日志');
   if (!step1) return;
   const step2 = confirm('❗ 二次确认\n\n此操作不可撤销，所有个人数据将永久丢失！\n\n如需保留，请先在设置中"导出个人数据"备份。\n\n确定继续吗？');
   if (!step2) return;
   favorites.clear();
   customMeanings = {};
   customWordDict = {};
+  favCategories = {};
   history.length = 0;
   recentSearches = [];
+  appLogs = [];
   try {
     localStorage.removeItem('unicode_favorites');
     localStorage.removeItem('unicode_custom_meanings');
     localStorage.removeItem('unicode_custom_word_dict');
+    localStorage.removeItem('unicode_fav_categories');
     localStorage.removeItem('unicode_history');
     localStorage.removeItem('recentSearches');
     localStorage.removeItem('managePin');
     localStorage.removeItem('manageMode');
+    localStorage.removeItem('unicode_logs');
   } catch(e) {}
   updateFavCount();
   refreshSettingsDisplay();
@@ -2910,11 +3072,12 @@ async function clearAllUserData() {
 function exportUserData() {
   const data = {
     _type: 'unicode-app-user-data',
-    _version: 2,
+    _version: 3,
     _exportedAt: new Date().toISOString(),
     favorites: [...favorites],
     customMeanings: customMeanings,
     customWordDict: customWordDict,
+    favCategories: favCategories,
     history: history,
     recentSearches: recentSearches,
   };
@@ -2930,6 +3093,7 @@ function exportUserData() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast('已导出个人数据');
+  addLog('导出数据', `收藏${favorites.size}项, 字义${Object.keys(customMeanings).length}条, 字典${Object.keys(customWordDict).length}条, 分类${Object.keys(favCategories).length}个`);
 }
 
 // 导入个人数据
@@ -2948,6 +3112,7 @@ function importUserData(event) {
         + `• 收藏: ${data.favorites?.length || 0} 项\n`
         + `• 自定义字义: ${Object.keys(data.customMeanings || {}).length} 条\n`
         + `• 自定义字典: ${Object.keys(data.customWordDict || {}).length} 条\n`
+        + `• 收藏分类: ${Object.keys(data.favCategories || {}).length} 个\n`
         + `• 浏览记录: ${data.history?.length || 0} 条\n`
         + `• 最近搜索: ${data.recentSearches?.length || 0} 条\n\n`
         + '确定继续？');
@@ -2965,6 +3130,10 @@ function importUserData(event) {
       if (data.customWordDict && typeof data.customWordDict === 'object') {
         customWordDict = data.customWordDict;
         try { localStorage.setItem('unicode_custom_word_dict', JSON.stringify(customWordDict)); } catch(e) {}
+      }
+      if (data.favCategories && typeof data.favCategories === 'object') {
+        favCategories = data.favCategories;
+        try { localStorage.setItem('unicode_fav_categories', JSON.stringify(favCategories)); } catch(e) {}
       }
       if (Array.isArray(data.history)) {
         history.length = 0;
@@ -3896,14 +4065,25 @@ function showHistory() {
 
 function renderFavoritesControls() {
   const bar = document.getElementById('controlBar');
+  const catMode = favCategoryMode.startsWith('category:') ? 'categories' : favCategoryMode;
   bar.innerHTML = `
-    <div style="display:flex; width:100%; gap:8px;">
-      <button class="toggle-btn ${favViewMode==='grouped'?'active':''}" onclick="setFavView('grouped')">📂 按区块分组</button>
-      <button class="toggle-btn ${favViewMode==='lang'?'active':''}" onclick="setFavView('lang')">🌐 按语言分组</button>
-      <button class="toggle-btn ${favViewMode==='flat'?'active':''}" onclick="setFavView('flat')">📋 平铺显示</button>
+    <div style="display:flex; width:100%; gap:8px; flex-wrap:wrap; align-items:center;">
+      <button class="toggle-btn ${catMode==='all'?'active':''}" onclick="setFavCategoryMode('all')">⭐ 全部收藏</button>
+      <button class="toggle-btn ${catMode==='categories'?'active':''}" onclick="setFavCategoryMode('categories')">📁 我的分类</button>
+      <span style="color:var(--border)">|</span>
+      <button class="toggle-btn ${favViewMode==='grouped'?'active':''}" onclick="setFavView('grouped')">📂 按区块</button>
+      <button class="toggle-btn ${favViewMode==='lang'?'active':''}" onclick="setFavView('lang')">🌐 按语言</button>
+      <button class="toggle-btn ${favViewMode==='flat'?'active':''}" onclick="setFavView('flat')">📋 平铺</button>
+      <button class="toggle-btn" style="margin-left:auto" onclick="openManageCategories()">⚙️ 管理分类</button>
     </div>
   `;
   bar.style.display = 'flex';
+}
+
+function setFavCategoryMode(mode) {
+  favCategoryMode = mode;
+  renderFavoritesControls();
+  renderFavorites();
 }
 
 function setFavView(mode) {
@@ -3970,6 +4150,19 @@ function renderFavorites() {
   const favs = [...favorites].sort((a,b)=>a-b);
   const el = document.getElementById('content');
   document.getElementById('pagination').innerHTML = '';
+
+  // 分类浏览模式
+  if (favCategoryMode === 'categories') {
+    renderCategoryList();
+    return;
+  }
+  
+  // 查看特定分类
+  if (favCategoryMode.startsWith('category:')) {
+    const catName = decodeURIComponent(favCategoryMode.split(':')[1]);
+    renderCategoryDetail(catName);
+    return;
+  }
 
   if (favs.length === 0) {
     el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">还没有收藏任何字符<br><br>点击字符查看详情，然后点击 ☆ 收藏</div>';
@@ -4053,6 +4246,156 @@ function toggleFavGroup(header) {
   } else {
     body.style.display = 'none';
     arrow.textContent = '▶';
+  }
+}
+
+// ============================================================
+// 分类浏览渲染
+// ============================================================
+function renderCategoryList() {
+  const el = document.getElementById('content');
+  const catNames = Object.keys(favCategories);
+  
+  setCount(`共 ${catNames.length} 个分类`);
+  
+  if (!catNames.length) {
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">还没有创建分类<br><br>点击字符查看详情，然后点击 📁 加入分类</div>';
+    return;
+  }
+  
+  let html = '';
+  for (const name of catNames.sort()) {
+    const cps = favCategories[name] || [];
+    const filtered = cps.filter(cp => favorites.has(cp));
+    const preview = filtered.slice(0, 8).map(cp => {
+      const ch = safeChr(cp) || '?';
+      return `<span style="display:inline-block;padding:2px 4px;margin:1px;background:var(--bg);border-radius:4px;font-size:14px">${escapeHtml(ch)}</span>`;
+    }).join('');
+    html += `
+      <div class="list-item" style="cursor:pointer" onclick="setFavCategoryMode('category:${encodeURIComponent(name)}');renderFavorites()">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="title">📁 ${name}</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="color:var(--muted);font-size:13px">${filtered.length} 个字符</span>
+          </div>
+        </div>
+        <div class="desc" style="margin-top:6px">${preview || '<span style="color:var(--muted)">（空分类）</span>'}</div>
+      </div>
+    `;
+  }
+  el.innerHTML = html;
+  document.getElementById('contentScroll').scrollTop = 0;
+}
+
+function renderCategoryDetail(catName) {
+  const el = document.getElementById('content');
+  let cps = favCategories[catName] || [];
+  // 过滤出仍然在收藏中的字符
+  cps = cps.filter(cp => favorites.has(cp));
+  
+  document.title = `📁 ${catName} - Unicode编码查询`;
+  setCount(`${catName} (${cps.length} 个字符)`);
+  
+  if (!cps.length) {
+    el.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">分类"${catName}"中没有字符<br><br>点击字符详情中的 📁 按钮添加</div>`;
+    return;
+  }
+  
+  // 使用平铺模式显示
+  favFlatState = { cps: cps, rendered: 0, batchSize: 60, observer: null };
+  el.innerHTML = '<div class="grid" id="favFlatGrid"></div><div id="favFlatSentinel" style="text-align:center;padding:20px;color:var(--muted);font-size:13px">向下滚动加载更多…</div>';
+  
+  const grid = document.getElementById('favFlatGrid');
+  const sentinel = document.getElementById('favFlatSentinel');
+  
+  function renderBatch() {
+    const start = favFlatState.rendered;
+    const end = Math.min(start + favFlatState.batchSize, favFlatState.cps.length);
+    if (start >= end) {
+      sentinel.textContent = '— 已显示全部 —';
+      if (favFlatState.observer) favFlatState.observer.disconnect();
+      return;
+    }
+    let html = '';
+    for (let i = start; i < end; i++) {
+      html += renderCell(favFlatState.cps[i], i - start);
+    }
+    grid.insertAdjacentHTML('beforeend', html);
+    favFlatState.rendered = end;
+  }
+  
+  renderBatch();
+  
+  if ('IntersectionObserver' in window) {
+    favFlatState.observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) renderBatch();
+    }, { rootMargin: '200px' });
+    favFlatState.observer.observe(sentinel);
+  } else {
+    while (favFlatState.rendered < favFlatState.cps.length) renderBatch();
+  }
+  
+  document.getElementById('contentScroll').scrollTop = 0;
+}
+
+function openManageCategories() {
+  const catNames = Object.keys(favCategories);
+  
+  let html = '<div style="margin-bottom:16px"><b>管理分类</b></div>';
+  
+  // 创建新分类
+  html += `<div style="display:flex;gap:8px;margin-bottom:16px">
+    <input type="text" id="newCatName" placeholder="新分类名" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">
+    <button onclick="manageCreateCategory()" style="padding:8px 16px;border:none;border-radius:8px;background:var(--accent);color:white;cursor:pointer">+ 创建</button>
+  </div>`;
+  
+  // 分类列表
+  if (!catNames.length) {
+    html += '<div style="text-align:center;padding:20px;color:var(--muted)">暂无分类</div>';
+  } else {
+    html += '<div style="max-height:300px;overflow-y:auto">';
+    for (const name of catNames.sort()) {
+      const count = favCategories[name] ? favCategories[name].filter(cp => favorites.has(cp)).length : 0;
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border)">
+        <span style="flex:1">📁 ${name} <span style="color:var(--muted);font-size:12px">(${count} 个字符)</span></span>
+        <button onclick="manageRenameCategory('${name.replace(/'/g, "\\'")}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text);cursor:pointer;font-size:12px">重命名</button>
+        <button onclick="manageDeleteCategory('${name.replace(/'/g, "\\'")}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:#e74c3c;cursor:pointer;font-size:12px">删除</button>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  
+  showModal('⚙️ 管理分类', html, '', [{text:'完成',cls:'primary',action:'closeModal()'}]);
+}
+
+function manageCreateCategory() {
+  const input = document.getElementById('newCatName');
+  const name = input ? input.value.trim() : '';
+  if (!name) { showToast('请输入分类名'); return; }
+  if (createFavCategory(name)) {
+    openManageCategories();
+  }
+}
+
+function manageRenameCategory(oldName) {
+  const newName = prompt('请输入新名称：', oldName);
+  if (!newName) return;
+  if (renameFavCategory(oldName, newName)) {
+    openManageCategories();
+    if (favCategoryMode === `category:${encodeURIComponent(oldName)}`) {
+      favCategoryMode = `category:${encodeURIComponent(newName)}`;
+    }
+  }
+}
+
+function manageDeleteCategory(name) {
+  if (deleteFavCategory(name)) {
+    openManageCategories();
+    if (favCategoryMode === `category:${encodeURIComponent(name)}`) {
+      favCategoryMode = 'categories';
+      renderFavoritesControls();
+      renderFavorites();
+    }
   }
 }
 
@@ -4163,6 +4506,7 @@ function doSearch() {
   const q = input.value.trim();
   if (!q) return;
   addRecentSearch(q);
+  addLog('搜索', q);
 
   clearControlBar();
   let mode = searchMode;
@@ -4643,6 +4987,8 @@ function copyBatchColumn() {
 // ============================================================
 function showDetail(cp) {
   addToHistory(cp);
+  const ch = safeChr(cp) || '?';
+  addLog('查看详情', `${ch} (U+${cp.toString(16).toUpperCase().padStart(4,'0')})`);
   const info = getCharInfo(cp);
   if (!info) { alert('无效编码点'); return; }
   const isFav = favorites.has(cp);
@@ -4758,6 +5104,7 @@ function showDetail(cp) {
     <button onclick="copyText('${info.utf8}')">复制 UTF-8</button>
     <button onclick="showZoomPreview(${cp})">🔍 放大预览</button>
     <button class="secondary" onclick="toggleFavModal(${cp})">${isFav?'⭐ 已收藏':'☆ 收藏'}</button>
+    <button class="secondary" onclick="openCategoryPicker(${cp}, safeChr(${cp}) || '?')">📁 加入分类</button>
   `;
 
   document.getElementById('modalOverlay').classList.add('show');
@@ -4790,15 +5137,43 @@ function renderWarningBanner(flags) {
   `;
 }
 function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+function showModal(title, bodyHTML, footerHTML, buttons) {
+  document.getElementById('modalHeader').innerHTML = `<div class="name">${title}</div>`;
+  document.getElementById('modalBody').innerHTML = bodyHTML;
+  let footer = footerHTML || '';
+  if (buttons && buttons.length) {
+    footer += '<div style="display:flex;gap:8px;margin-top:12px">';
+    for (const btn of buttons) {
+      if (btn.cls === 'primary') {
+        footer += `<button class="file-upload-btn" onclick="${btn.action}">${btn.text}</button>`;
+      } else {
+        footer += `<button onclick="${btn.action}" style="padding:8px 20px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;color:var(--text)">${btn.text}</button>`;
+      }
+    }
+    footer += '</div>';
+  }
+  document.getElementById('modalFooter').innerHTML = footer;
+  document.getElementById('modalOverlay').classList.add('show');
+}
 function copyText(text) {
   navigator.clipboard.writeText(text).then(() => showToast(`已复制: ${text.slice(0,30)}`)).catch(() => {
     const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast(`已复制: ${text.slice(0,30)}`);
   });
 }
 function toggleFavModal(cp) {
-  if (favorites.has(cp)) { favorites.delete(cp); showToast('已取消收藏'); }
-  else { favorites.add(cp); showToast('已加入收藏'); }
+  const ch = safeChr(cp) || '?';
+  if (favorites.has(cp)) {
+    favorites.delete(cp);
+    showToast('已取消收藏');
+    addLog('取消收藏', `${ch} (U+${cp.toString(16).toUpperCase().padStart(4,'0')})`);
+  } else {
+    favorites.add(cp);
+    showToast('已加入收藏');
+    addLog('加入收藏', `${ch} (U+${cp.toString(16).toUpperCase().padStart(4,'0')})`);
+  }
   saveFavorites();
+  updateFavCount();
   showDetail(cp);
   if (currentView === 'favorites') { renderFavorites(); }
   else if (currentView === 'random') { renderRandomGrid(); }
@@ -5059,6 +5434,17 @@ function renderSettingsBody() {
     </div>
 
     <div class="settings-section">
+      <h3>📋 操作日志</h3>
+      <p>记录最近的操作行为（最多保存 ${MAX_LOGS} 条）。</p>
+      <div id="logList" style="max-height:200px;overflow-y:auto;margin:10px 0;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.6">
+        ${renderLogsHTML()}
+      </div>
+      <div class="settings-actions" style="margin-top:8px">
+        <button class="settings-reset-btn" onclick="clearLogs();renderLogsInSettings()">🗑️ 清空日志</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <h3>ℹ️ 关于</h3>
       <p>本工具基于 Unicode Character Database (UCD) 提供字符查询、浏览和收藏功能。内置数据包含 Unicode 17.0 全部 346 个区块定义。上传完整 UnicodeData.txt 后可获得所有字符的名称、类别、双向属性等详细信息。</p>
     </div>
@@ -5083,8 +5469,18 @@ function toggleTheme() {
 // 收藏快捷操作（从主页面）
 // ============================================================
 function toggleFavorite(cp) {
-  if (favorites.has(cp)) favorites.delete(cp); else favorites.add(cp);
+  const ch = safeChr(cp) || '?';
+  if (favorites.has(cp)) {
+    favorites.delete(cp);
+    showToast('已取消收藏');
+    addLog('取消收藏', `${ch} (U+${cp.toString(16).toUpperCase().padStart(4,'0')})`);
+  } else {
+    favorites.add(cp);
+    showToast('已加入收藏');
+    addLog('加入收藏', `${ch} (U+${cp.toString(16).toUpperCase().padStart(4,'0')})`);
+  }
   saveFavorites();
+  updateFavCount();
   if (currentView === 'favorites') { renderFavorites(); }
   else if (currentView === 'random') { renderRandomGrid(); }
   else renderGrid();
