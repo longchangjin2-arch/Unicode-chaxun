@@ -737,6 +737,31 @@ body.dark .modal-header .big-char.invisible-marker { background: rgba(0,0,0,0.3)
 }
 .modal-footer button.secondary:hover { background: #e9ecef; }
 
+/* 详情弹窗字符导航栏 */
+.detail-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 10px 24px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 0 0 12px 12px;
+}
+.detail-nav .nav-arrow {
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; cursor: pointer;
+  transition: all .15s;
+}
+.detail-nav .nav-arrow:hover:not(:disabled) {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
+.detail-nav .nav-arrow:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+.detail-nav .nav-pos {
+  font-size: 12px; color: var(--muted);
+  font-family: Consolas, monospace;
+}
+
 .modal-close {
   position: absolute; top: 12px; right: 16px;
   background: none; border: none; font-size: 20px;
@@ -2628,6 +2653,8 @@ const PAGE_SIZE = 96;
 let currentView = 'blocks';
 let currentChars = [];
 let currentPage = 0;
+let detailCP = null;        // 当前详情弹窗显示的字符
+let detailList = null;      // 详情弹窗导航所用的字符列表（引用 currentChars 或指定列表）
 let currentTitle = 'Unicode编码查询';
 let favorites = new Set(JSON.parse(localStorage.getItem('unicode_favorites')||'[]'));
 let nameIndex = null;
@@ -3788,6 +3815,32 @@ function renderPagination(total) {
 
 function renderGrid() {
   const el = document.getElementById('content');
+
+  // 全部字符视图：按需分页生成
+  if (currentView === 'all') {
+    buildAllSegIndex();
+    const total = allCharsTotal;
+    if (total <= 0) {
+      el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">暂无字符</div>';
+      document.getElementById('pagination').innerHTML = '';
+      setCount(''); return;
+    }
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const start = currentPage * PAGE_SIZE;
+    const page = getAllCharsPage(start, PAGE_SIZE);
+    // 保存当前页码点到 currentChars 供详情导航使用
+    currentChars = page;
+
+    setCount(`共 ${total.toLocaleString()} 个字符`);
+    renderPagination(totalPages);
+
+    let html = '<div class="grid">';
+    page.forEach((cp, i) => { html += renderCell(cp, i); });
+    html += '</div>';
+    el.innerHTML = html;
+    return;
+  }
+
   if (!currentChars.length) {
     el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">暂无字符</div>';
     document.getElementById('pagination').innerHTML = '';
@@ -3841,7 +3894,7 @@ function renderCell(cp, animIdx) {
 
   const chClass = flags.isInvisible ? 'ch invisible-marker' : 'ch';
   const badge = badgeClass ? `<span class="warn-badge ${badgeClass}">${badgeText}</span>` : '';
-  const animStyle = (typeof animIdx === 'number') ? ` style="animation-delay:${Math.min(animIdx*0.018, 0.6)}s"` : '';
+  const animStyle = (typeof animIdx === 'number') ? ` style="animation-delay:${Math.min(animIdx*0.003, 0.3)}s"` : '';
 
   return `
     <div class="cell cell-enter ${warnClasses.join(' ')}" ${animStyle} onclick="showDetail(${cp})">
@@ -4083,6 +4136,10 @@ function showOverview() {
           <span class="ql-icon">🔍️</span>
           <span class="ql-name">字符搜索</span>
         </div>
+        <div class="quick-link" onclick="showAllChars()">
+          <span class="ql-icon">🔠</span>
+          <span class="ql-name">全部字符</span>
+        </div>
         <div class="quick-link" onclick="showRandom()">
           <span class="ql-icon">🎲️</span>
           <span class="ql-name">随机字符</span>
@@ -4143,6 +4200,89 @@ function showOverview() {
   `;
   document.getElementById('pagination').innerHTML = '';
   setCount('');
+  document.getElementById('contentScroll').scrollTop = 0;
+}
+
+// ============================================================
+// 视图 - 全部字符（按码点顺序，懒加载按需分页）
+// ============================================================
+let allCharsTotal = -1;       // 全部有效字符总数（缓存）
+let allSegOffsets = null;     // 每段的全局起始索引
+let allSegFirstCP = null;     // 每段的第一个有效码点
+let allSegCounts = null;      // 每段有效字符数
+const ALL_SEG_SIZE = 0x10000; // 每段大小（65536）
+
+function buildAllSegIndex() {
+  if (allSegOffsets) return;
+  const offsets = [], firstCPs = [], counts = [];
+  let globalIdx = 0;
+  for (let segStart = 0; segStart <= 0x10FFFF; segStart += ALL_SEG_SIZE) {
+    let segCount = 0, firstCP = -1;
+    const segEnd = Math.min(segStart + ALL_SEG_SIZE, 0x110000);
+    for (let cp = segStart; cp < segEnd; cp++) {
+      if (cp >= 0xD800 && cp <= 0xDFFF) { cp = 0xDFFF; continue; }
+      if (cp <= 0x1F || (cp >= 0x7F && cp <= 0x9F)) continue;
+      if ((cp & 0xFFFE) === 0xFFFE) continue;
+      if (firstCP === -1) firstCP = cp;
+      segCount++;
+    }
+    offsets.push(globalIdx);
+    firstCPs.push(firstCP);
+    counts.push(segCount);
+    globalIdx += segCount;
+  }
+  allSegOffsets = offsets;
+  allSegFirstCP = firstCPs;
+  allSegCounts = counts;
+  allCharsTotal = globalIdx;
+}
+
+// 获取第 idx 个有效码点（全局索引）
+function getCPByGlobalIdx(idx) {
+  buildAllSegIndex();
+  // 二分查找所在段
+  let lo = 0, hi = allSegOffsets.length - 1, segIdx = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (allSegOffsets[mid] <= idx) { segIdx = mid; lo = mid + 1; }
+    else { hi = mid - 1; }
+  }
+  // 在段内定位
+  let remaining = idx - allSegOffsets[segIdx];
+  let cp = allSegFirstCP[segIdx];
+  if (cp === -1) return -1;
+  let count = 0;
+  while (count < remaining && cp <= 0x10FFFF) {
+    cp++;
+    if (cp >= 0xD800 && cp <= 0xDFFF) { cp = 0xDFFF; cp++; continue; }
+    if (cp <= 0x1F || (cp >= 0x7F && cp <= 0x9F)) continue;
+    if ((cp & 0xFFFE) === 0xFFFE) continue;
+    count++;
+  }
+  return cp;
+}
+
+// 获取从 startIdx 开始的 count 个有效码点
+function getAllCharsPage(startIdx, count) {
+  const cps = [];
+  const total = allCharsTotal;
+  if (startIdx >= total) return cps;
+  const endIdx = Math.min(startIdx + count, total);
+  for (let idx = startIdx; idx < endIdx; idx++) {
+    cps.push(getCPByGlobalIdx(idx));
+  }
+  return cps;
+}
+
+function showAllChars() {
+  currentView = 'all';
+  currentChars = [];  // 不预构建数组，按需分页
+  currentPage = 0;
+  buildAllSegIndex(); // 预计算分段索引（很快，<10ms）
+  setTitle(`🔠 全部字符（共 ${allCharsTotal.toLocaleString()} 个）`);
+  setActiveNav('overview');
+  clearControlBar();
+  renderGrid();
   document.getElementById('contentScroll').scrollTop = 0;
 }
 
@@ -4345,8 +4485,10 @@ function renderFavorites() {
   const el = document.getElementById('content');
   document.getElementById('pagination').innerHTML = '';
 
-  // 分类浏览模式
+  // 分类浏览模式（没有单个字符列表，currentChars 置空）
   if (favCategoryMode === 'categories') {
+    currentChars = [];
+    currentPage = 0;
     renderCategoryList();
     return;
   }
@@ -4357,6 +4499,10 @@ function renderFavorites() {
     renderCategoryDetail(catName);
     return;
   }
+
+  // "全部收藏" 下的所有场景都设置 currentChars 为收藏列表
+  currentChars = favs;
+  currentPage = 0;
 
   if (favs.length === 0) {
     el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">还没有收藏任何字符<br><br>点击字符查看详情，然后点击 ☆ 收藏</div>';
@@ -4486,6 +4632,9 @@ function renderCategoryDetail(catName) {
   let cps = favCategories[catName] || [];
   // 过滤出仍然在收藏中的字符
   cps = cps.filter(cp => favorites.has(cp));
+  // 设置导航列表为当前分类的字符
+  currentChars = cps;
+  currentPage = 0;
   
   document.title = `📁 ${catName} - Unicode编码查询`;
   setCount(`${catName} (${cps.length} 个字符)`);
@@ -4593,9 +4742,17 @@ function manageDeleteCategory(name) {
   }
 }
 
-function prevPage() { if (currentPage > 0) { currentPage--; renderGrid(); document.getElementById('contentScroll').scrollTop = 0; } }
+function prevPage() {
+  if (currentPage > 0) { currentPage--; renderGrid(); document.getElementById('contentScroll').scrollTop = 0; }
+}
 function nextPage() {
-  const total = Math.ceil(currentChars.length / PAGE_SIZE);
+  let total;
+  if (currentView === 'all') {
+    buildAllSegIndex();
+    total = Math.ceil(allCharsTotal / PAGE_SIZE);
+  } else {
+    total = Math.ceil(currentChars.length / PAGE_SIZE);
+  }
   if (currentPage < total - 1) { currentPage++; renderGrid(); document.getElementById('contentScroll').scrollTop = 0; }
 }
 
@@ -5187,6 +5344,10 @@ function showDetail(cp) {
   if (!info) { alert('无效编码点'); return; }
   const isFav = favorites.has(cp);
   const flags = getCharFlags(cp);
+  detailCP = cp;
+  // 总是以当前视图的 currentChars 作为导航上下文
+  // 这样收藏页点击字符就按收藏顺序翻，全部字符页按 Unicode 顺序翻
+  detailList = (currentChars && currentChars.length && currentChars.includes(cp)) ? currentChars : null;
 
   // 大字符显示：不可见字符使用标记样式
   const bigCharClass = flags.isInvisible ? 'big-char invisible-marker' + (flags.invisibleMark && flags.invisibleMark.length > 2 ? ' zw' : '') : 'big-char';
@@ -5301,7 +5462,78 @@ function showDetail(cp) {
     <button class="secondary" onclick="openCategoryPicker(${cp}, safeChr(${cp}) || '?')">📁 加入分类</button>
   `;
 
+  // 导航栏：在字符列表中切换前/后字符
+  let navHTML = '';
+  if (detailList && detailList.length > 0) {
+    const idx = detailList.indexOf(cp);
+    if (idx >= 0) {
+      let hasPrev, hasNext, posText;
+      if (currentView === 'all') {
+        // 全部字符视图：显示全局位置，支持跨页
+        const globalIdx = currentPage * PAGE_SIZE + idx;
+        hasPrev = globalIdx > 0;
+        hasNext = globalIdx < allCharsTotal - 1;
+        posText = `${globalIdx.toLocaleString()} / ${allCharsTotal.toLocaleString()}`;
+      } else {
+        hasPrev = idx > 0;
+        hasNext = idx < detailList.length - 1;
+        posText = `${idx + 1} / ${detailList.length}`;
+      }
+      navHTML = `
+        <div class="detail-nav" id="detailNav">
+          <button class="nav-arrow" onclick="navigateDetail(-1)" ${!hasPrev?'disabled':''} title="上一个字符（← ）">◀ 上一个</button>
+          <span class="nav-pos">${posText}</span>
+          <button class="nav-arrow" onclick="navigateDetail(1)" ${!hasNext?'disabled':''} title="下一个字符（→）">下一个 ▶</button>
+        </div>
+      `;
+    }
+  }
+  const oldNav = document.getElementById('detailNav');
+  if (oldNav) oldNav.remove();
+  if (navHTML) {
+    const modal = document.getElementById('modal');
+    modal.insertAdjacentHTML('beforeend', navHTML);
+  }
+
   document.getElementById('modalOverlay').classList.add('show');
+}
+
+// 切换详情弹窗到前/后字符（dir: -1 上一个, 1 下一个）
+// 全部字符视图支持跨页：到页边界时自动翻到上/下一页
+function navigateDetail(dir) {
+  if (!detailList || detailCP === null) return;
+  const idx = detailList.indexOf(detailCP);
+  if (idx < 0) return;
+  const next = idx + dir;
+
+  // 常规视图：直接用列表中的下一个
+  if (next >= 0 && next < detailList.length) {
+    showDetail(detailList[next]);
+    const modalBody = document.getElementById('modalBody');
+    if (modalBody) modalBody.scrollTop = 0;
+    return;
+  }
+
+  // 全部字符视图：跨页导航
+  if (currentView === 'all') {
+    buildAllSegIndex();
+    const globalIdx = currentPage * PAGE_SIZE + idx;
+    const newGlobalIdx = globalIdx + dir;
+    if (newGlobalIdx < 0 || newGlobalIdx >= allCharsTotal) return;
+    const newPage = Math.floor(newGlobalIdx / PAGE_SIZE);
+    if (newPage !== currentPage) {
+      currentPage = newPage;
+      renderGrid();
+      document.getElementById('contentScroll').scrollTop = 0;
+    }
+    const localIdx = newGlobalIdx - newPage * PAGE_SIZE;
+    const newCP = currentChars[localIdx];
+    if (newCP !== undefined) {
+      showDetail(newCP);
+      const modalBody = document.getElementById('modalBody');
+      if (modalBody) modalBody.scrollTop = 0;
+    }
+  }
 }
 function row(label, value) {
   return `<div class="modal-row"><span class="label">${label}</span><span class="value">${value||'—'}</span></div>`;
@@ -5330,9 +5562,20 @@ function renderWarningBanner(flags) {
     </div>
   `;
 }
-function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  detailCP = null;
+  detailList = null;
+  const nav = document.getElementById('detailNav');
+  if (nav) nav.remove();
+}
 
 function showModal(title, bodyHTML, footerHTML, buttons) {
+  // showModal 用于非详情弹窗，清理详情导航状态
+  detailCP = null;
+  detailList = null;
+  const oldNav = document.getElementById('detailNav');
+  if (oldNav) oldNav.remove();
   document.getElementById('modalHeader').innerHTML = `<div class="name">${title}</div>`;
   document.getElementById('modalBody').innerHTML = bodyHTML;
   let footer = footerHTML || '';
@@ -5716,6 +5959,17 @@ function toggleFavorite(cp) {
 showOverview();
 updateFavCount();
 applyAnimSetting();
+// 键盘左右箭头：在详情弹窗中切换前/后字符
+document.addEventListener('keydown', (e) => {
+  const overlay = document.getElementById('modalOverlay');
+  if (!overlay.classList.contains('show')) return;
+  // 忽略输入框中的按键
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); navigateDetail(-1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); navigateDetail(1); }
+  else if (e.key === 'Escape') { closeModal(); }
+});
 // 异步加载已存储的 Unicode 数据（不阻塞初始渲染）
 loadStoredUnicodeData().then(() => {
   // 数据加载完成后无需重新渲染，所有查询函数会动态检查 unicodeData
