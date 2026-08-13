@@ -668,6 +668,19 @@ body.dark .modal-header .big-char.invisible-marker { background: rgba(0,0,0,0.3)
 }
 .pagination button:hover:not(:disabled) { background: #e9ecef; }
 .pagination button:disabled { opacity: 0.4; cursor: default; }
+.pagination .pg-jump {
+  display: inline-flex; gap: 4px; align-items: center;
+}
+.pagination .pg-jump input {
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 8px; font-size: 12px; background: var(--card); color: var(--text);
+  outline: none; transition: border-color .15s;
+}
+.pagination .pg-jump input:focus { border-color: var(--accent); }
+.pagination .pg-jump button {
+  padding: 5px 10px; font-size: 12px;
+}
+body.dark .pagination .pg-jump input { background: #1e2742; }
 
 /* ===== 弹窗 ===== */
 .modal-overlay {
@@ -975,6 +988,10 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
   .toggle-btn { padding: 6px 10px; font-size: 12px; }
   /* 分页 */
   #pagination button { padding: 6px 12px; font-size: 12px; }
+  .pagination { flex-wrap: wrap; gap: 6px; }
+  .pagination .pg-jump input { width: 52px !important; padding: 4px 6px; font-size: 11px; }
+  .pagination #jumpUnicodeInput { width: 70px !important; }
+  .pagination .pg-jump button { padding: 4px 8px; font-size: 11px; }
 }
 
 @media (max-width: 480px) {
@@ -1010,8 +1027,9 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
   <button class="nav-btn" data-view="compare" onclick="showCompare()">⚖️ 字符对比</button>
   <button class="nav-btn" data-view="batch" onclick="showBatch()">📊️ 批量解析</button>
   <div class="sep"></div>
+  <button class="nav-btn" data-view="all" onclick="showAllChars()">🔠 全部字符</button>
   <button class="nav-btn" data-view="random" onclick="showRandom()">🎲️ 随机字符</button>
-  <button class="nav-btn active" data-view="blocks" onclick="showBlocks()">📂️ 按区块浏览</button>
+  <button class="nav-btn" data-view="blocks" onclick="showBlocks()">📂️ 按区块浏览</button>
   <button class="nav-btn" data-view="categories" onclick="showCategories()">🏷️ 按类别浏览</button>
   <button class="nav-btn" data-view="history" onclick="showHistory()">📜️ 浏览记录</button>
   <button class="nav-btn" data-view="favorites" onclick="showFavorites()">⭐️ 我的收藏</button>
@@ -3805,12 +3823,88 @@ function clearControlBar() {
 
 function renderPagination(total) {
   const el = document.getElementById('pagination');
-  if (total <= 1) { el.innerHTML = ''; return; }
+  if (total <= 1 && currentView !== 'all') { el.innerHTML = ''; return; }
+  const showUnicodeJump = currentView === 'all';
+  const totalDisplay = currentView === 'all'
+    ? ((allCharsTotal>0) ? Math.ceil(allCharsTotal / PAGE_SIZE) : total)
+    : total;
   el.innerHTML = `
     <button onclick="prevPage()" ${currentPage===0?'disabled':''}>◀ 上一页</button>
-    <span style="font-size:13px;color:var(--muted)">第 ${currentPage+1} / ${total} 页</span>
-    <button onclick="nextPage()" ${currentPage>=total-1?'disabled':''}>下一页 ▶</button>
+    <span class="pg-jump">
+      <input type="number" id="jumpPageInput" min="1" max="${totalDisplay}" value="${currentPage+1}"
+             placeholder="页码" style="width:62px"
+             onkeydown="if(event.key==='Enter')jumpToPage(parseInt(this.value))">
+      <button onclick="jumpToPage(parseInt(document.getElementById('jumpPageInput').value))">跳页</button>
+    </span>
+    <span style="font-size:13px;color:var(--muted);white-space:nowrap">第 ${currentPage+1} / ${totalDisplay} 页</span>
+    ${showUnicodeJump ? `
+    <span class="pg-jump" title="输入 Unicode 编码，如 4E2D / U+4E2D">
+      <input type="text" id="jumpUnicodeInput" placeholder="Unicode"
+             style="width:90px;text-transform:uppercase"
+             onkeydown="if(event.key==='Enter')jumpToUnicode(this.value)">
+      <button onclick="jumpToUnicode(document.getElementById('jumpUnicodeInput').value)">跳编码</button>
+    </span>
+    ` : ''}
+    <button onclick="nextPage()" ${currentPage>=totalDisplay-1?'disabled':''}>下一页 ▶</button>
   `;
+}
+
+// 跳转到指定页（从1开始）
+function jumpToPage(pageNum) {
+  if (!Number.isFinite(pageNum) || pageNum < 1) { showToast('请输入有效页码'); return; }
+  let total;
+  if (currentView === 'all') {
+    buildAllSegIndex();
+    total = Math.ceil(allCharsTotal / PAGE_SIZE);
+  } else {
+    total = Math.ceil(currentChars.length / PAGE_SIZE);
+  }
+  if (pageNum > total) pageNum = total;
+  currentPage = pageNum - 1;
+  renderGrid();
+  document.getElementById('contentScroll').scrollTop = 0;
+  showToast(`已跳转到第 ${currentPage+1} 页`);
+}
+
+// 在全部字符视图中，跳转到包含指定 Unicode 编码的页
+function jumpToUnicode(raw) {
+  if (currentView !== 'all') { showToast('仅在全部字符视图可用'); return; }
+  if (!raw) { showToast('请输入 Unicode 编码'); return; }
+  let codeStr = raw.trim().replace(/^U\+/i, '').replace(/^0x/i, '');
+  const cp = parseInt(codeStr, 16);
+  if (!Number.isFinite(cp) || cp < 0 || cp > 0x10FFFF) { showToast('无效编码'); return; }
+  if (cp >= 0xD800 && cp <= 0xDFFF) { showToast('代理码点不在列表中'); return; }
+  buildAllSegIndex();
+  // 计算全局索引
+  let globalIdx = 0;
+  for (let segStart = 0; segStart <= 0x10FFFF; segStart += ALL_SEG_SIZE) {
+    const segEnd = Math.min(segStart + ALL_SEG_SIZE, 0x110000);
+    if (cp < segEnd) {
+      // 在本区内定位
+      for (let c = segStart; c <= cp; c++) {
+        if (c >= 0xD800 && c <= 0xDFFF) { c = 0xDFFF; continue; }
+        if (c <= 0x1F || (c >= 0x7F && c <= 0x9F)) continue;
+        if ((c & 0xFFFE) === 0xFFFE) continue;
+        if (c < cp) globalIdx++;
+      }
+      break;
+    }
+    globalIdx += allSegCounts[Math.floor(segStart / ALL_SEG_SIZE)];
+  }
+  currentPage = Math.floor(globalIdx / PAGE_SIZE);
+  renderGrid();
+  document.getElementById('contentScroll').scrollTop = 0;
+  showToast(`已定位到 U+${cp.toString(16).toUpperCase().padStart(4,'0')}`);
+  // 高亮对应单元格
+  setTimeout(() => {
+    const cells = document.querySelectorAll('.cell');
+    const localIdx = globalIdx - currentPage * PAGE_SIZE;
+    if (cells[localIdx]) {
+      cells[localIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      cells[localIdx].style.boxShadow = '0 0 0 3px var(--accent)';
+      setTimeout(() => { if (cells[localIdx]) cells[localIdx].style.boxShadow = ''; }, 2000);
+    }
+  }, 100);
 }
 
 function renderGrid() {
@@ -4280,7 +4374,7 @@ function showAllChars() {
   currentPage = 0;
   buildAllSegIndex(); // 预计算分段索引（很快，<10ms）
   setTitle(`🔠 全部字符（共 ${allCharsTotal.toLocaleString()} 个）`);
-  setActiveNav('overview');
+  setActiveNav('all');
   clearControlBar();
   renderGrid();
   document.getElementById('contentScroll').scrollTop = 0;
