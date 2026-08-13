@@ -95,6 +95,69 @@ body {
 }
 .search-page .sp-recent-item:hover { border-color: var(--accent); }
 
+/* ===== 总览页 ===== */
+.overview-page {
+  max-width: 860px; margin: 0 auto; padding: 16px 0;
+}
+.overview-page .welcome-card {
+  background: linear-gradient(135deg, var(--accent), #5b9bd5);
+  color: #fff; padding: 28px 24px; border-radius: 14px;
+  margin-bottom: 20px; box-shadow: 0 4px 16px rgba(58,126,191,0.25);
+}
+.overview-page .welcome-card h2 { font-size: 24px; margin-bottom: 6px; }
+.overview-page .welcome-card p { font-size: 14px; opacity: 0.9; line-height: 1.6; }
+.overview-page .stats-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.overview-page .stat-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; text-align: center; transition: transform .2s, box-shadow .2s;
+  cursor: pointer;
+}
+.overview-page .stat-card:hover {
+  transform: translateY(-2px); box-shadow: var(--shadow-hover);
+  border-color: var(--accent);
+}
+.overview-page .stat-num {
+  font-size: 28px; font-weight: 700; color: var(--accent); line-height: 1.2;
+}
+.overview-page .stat-label {
+  font-size: 12px; color: var(--muted); margin-top: 4px;
+}
+.overview-page .section-title {
+  font-size: 16px; font-weight: 600; margin: 20px 0 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.overview-page .quick-links {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.overview-page .quick-link {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 12px; text-align: center; cursor: pointer;
+  transition: all .2s; text-decoration: none; color: var(--text);
+}
+.overview-page .quick-link:hover {
+  border-color: var(--accent); color: var(--accent);
+  transform: translateY(-2px); box-shadow: var(--shadow-hover);
+}
+.overview-page .quick-link .ql-icon { font-size: 24px; display: block; margin-bottom: 4px; }
+.overview-page .quick-link .ql-name { font-size: 13px; font-weight: 500; }
+.overview-page .recent-list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.overview-page .recent-item {
+  padding: 5px 12px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; cursor: pointer; font-size: 13px;
+  transition: all .15s;
+}
+.overview-page .recent-item:hover { border-color: var(--accent); color: var(--accent); }
+.overview-page .empty-tip {
+  text-align: center; padding: 20px; color: var(--muted);
+  font-size: 13px; background: var(--bg); border-radius: 8px;
+}
+
 /* ===== 对比 & 批量解析页 ===== */
 .tool-page {
   max-width: 860px; margin: 0 auto; padding: 16px 0;
@@ -354,13 +417,14 @@ body.dark .batch-table .tag-sur { background: #4527a0; color: #ede7f6; }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Toast 滑入 */
-.toast {
-  animation: toastIn .25s cubic-bezier(.22,1,.36,1) both;
-}
-@keyframes toastIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Toast 通过过渡实现滑入/滑出 */
+
+/* 动画开关：禁用所有动画和过渡 */
+body.no-animations *, body.no-animations *::before, body.no-animations *::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
 }
 
 /* 设置面板淡入 */
@@ -916,6 +980,7 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
 <!-- 左侧边栏 -->
 <nav class="sidebar" id="sidebar">
   <h2>功能菜单</h2>
+  <button class="nav-btn active" data-view="overview" onclick="showOverview()">🏠 总览</button>
   <button class="nav-btn" data-view="search" onclick="showSearch()">🔍️ 搜索</button>
   <button class="nav-btn" data-view="compare" onclick="showCompare()">⚖️ 字符对比</button>
   <button class="nav-btn" data-view="batch" onclick="showBatch()">📊️ 批量解析</button>
@@ -2588,6 +2653,7 @@ function getWordInfo(cp) {
 let customMeanings = JSON.parse(localStorage.getItem('unicode_custom_meanings') || '{}');
 let customWordDict = JSON.parse(localStorage.getItem('unicode_custom_word_dict') || '{}');
 let manageMode = false;
+let animationEnabled = localStorage.getItem('unicode_anim') !== 'off';
 let history = JSON.parse(localStorage.getItem('unicode_history') || '[]');
 let favCategories = JSON.parse(localStorage.getItem('unicode_fav_categories') || '{}');
 // favCategories: { "分类名": [cp1, cp2, ...] }
@@ -3261,6 +3327,11 @@ function safeChr(cp) {
   try { return String.fromCodePoint(cp); } catch(e) { return null; }
 }
 
+// 轻量检查：是否为不可显示的控制字符（用于随机生成的性能优化）
+function isControlChar(cp) {
+  return (cp <= 0x1F) || (cp >= 0x7F && cp <= 0x9F);
+}
+
 // 优先使用已加载的 Unicode 数据，回退到内置
 function getBlockInfo(cp) {
   if (unicodeData.blocks) {
@@ -3855,11 +3926,11 @@ function generateRandomChars() {
   const chars = [];
 
   if (randomPartition === 'all') {
-    // 全部区域随机
+    // 全部区域随机（使用轻量检查代替 getCharName 以提升性能）
     for (let i = 0; i < randomCount; i++) {
       const [start,end] = RANDOM_RANGES[Math.floor(Math.random()*RANDOM_RANGES.length)];
       const cp = Math.floor(Math.random()*(end-start+1)) + start;
-      if (safeChr(cp) && getCharName(cp)) chars.push(cp);
+      if (safeChr(cp) && !isControlChar(cp)) chars.push(cp);
     }
   } else if (randomPartition.startsWith('block:')) {
     // 指定区块随机
@@ -3923,7 +3994,7 @@ function generateRandomChars() {
       while (chars.length < randomCount && attempts < randomCount * 20) {
         const [start, end] = ranges[Math.floor(Math.random() * ranges.length)];
         const cp = Math.floor(Math.random() * (end - start + 1)) + start;
-        if (safeChr(cp) && getCharName(cp) && !seen.has(cp)) {
+        if (safeChr(cp) && !isControlChar(cp) && !seen.has(cp)) {
           chars.push(cp); seen.add(cp);
         }
         attempts++;
@@ -3932,7 +4003,7 @@ function generateRandomChars() {
       const pool = [];
       for (const [start, end] of ranges) {
         for (let cp = start; cp <= end; cp++) {
-          if (safeChr(cp) && getCharName(cp)) pool.push(cp);
+          if (safeChr(cp) && !isControlChar(cp)) pool.push(cp);
         }
       }
       for (let i = pool.length - 1; i > 0; i--) {
@@ -3951,7 +4022,130 @@ function generateRandomChars() {
 }
 
 // ============================================================
-// 视图 - 按区块浏览
+// 视图 - 总览
+// ============================================================
+function showOverview() {
+  currentView = 'overview';
+  setTitle('🏠 总览');
+  setActiveNav('overview');
+  clearControlBar();
+
+  const charCount = unicodeData.charMap ? unicodeData.charMap.size : '—';
+  const blockCount = BLOCKS.length;
+  const favCount = favorites.size;
+  const categoryCount = Object.keys(favCategories).length;
+  const langCount = LANG_PARTITIONS.length;
+  const emojiCount = EMOJI_RANGES.reduce((sum, [s,e]) => sum + (e-s+1), 0);
+
+  const recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+  const recentFavChars = Array.from(favorites).slice(0, 12);
+  const historyRecent = history.slice(0, 10);
+
+  const el = document.getElementById('content');
+  el.innerHTML = `
+    <div class="overview-page">
+      <div class="welcome-card">
+        <h2>👋 欢迎使用 Unicode 编码查询</h2>
+        <p>本工具提供 Unicode 字符查询、浏览、收藏、对比和批量解析等功能。支持多种搜索模式，可按区块、语言、类别浏览全部 Unicode 字符。</p>
+      </div>
+
+      <div class="section-title">📊 数据统计</div>
+      <div class="stats-row">
+        <div class="stat-card" onclick="showBlocks()">
+          <div class="stat-num">${typeof charCount === 'number' ? charCount.toLocaleString() : charCount}</div>
+          <div class="stat-label">字符条目</div>
+        </div>
+        <div class="stat-card" onclick="showBlocks()">
+          <div class="stat-num">${blockCount}</div>
+          <div class="stat-label">Unicode 区块</div>
+        </div>
+        <div class="stat-card" onclick="showRandom()">
+          <div class="stat-num">${langCount}</div>
+          <div class="stat-label">语言分区</div>
+        </div>
+        <div class="stat-card" onclick="showFavorites()">
+          <div class="stat-num">${favCount}</div>
+          <div class="stat-label">收藏字符</div>
+        </div>
+        <div class="stat-card" onclick="showFavorites()">
+          <div class="stat-num">${categoryCount}</div>
+          <div class="stat-label">收藏分类</div>
+        </div>
+        <div class="stat-card" onclick="showRandom()">
+          <div class="stat-num">${emojiCount}</div>
+          <div class="stat-label">表情符号</div>
+        </div>
+      </div>
+
+      <div class="section-title">🚀 快捷入口</div>
+      <div class="quick-links">
+        <div class="quick-link" onclick="showSearch()">
+          <span class="ql-icon">🔍️</span>
+          <span class="ql-name">字符搜索</span>
+        </div>
+        <div class="quick-link" onclick="showRandom()">
+          <span class="ql-icon">🎲️</span>
+          <span class="ql-name">随机字符</span>
+        </div>
+        <div class="quick-link" onclick="showBlocks()">
+          <span class="ql-icon">📂️</span>
+          <span class="ql-name">区块浏览</span>
+        </div>
+        <div class="quick-link" onclick="showCategories()">
+          <span class="ql-icon">🏷️</span>
+          <span class="ql-name">类别浏览</span>
+        </div>
+        <div class="quick-link" onclick="showCompare()">
+          <span class="ql-icon">⚖️</span>
+          <span class="ql-name">字符对比</span>
+        </div>
+        <div class="quick-link" onclick="showBatch()">
+          <span class="ql-icon">📊️</span>
+          <span class="ql-name">批量解析</span>
+        </div>
+        <div class="quick-link" onclick="showFavorites()">
+          <span class="ql-icon">⭐️</span>
+          <span class="ql-name">我的收藏</span>
+        </div>
+        <div class="quick-link" onclick="showHistory()">
+          <span class="ql-icon">📜️</span>
+          <span class="ql-name">浏览记录</span>
+        </div>
+      </div>
+
+      ${recentSearches.length > 0 ? `
+        <div class="section-title">🔍️ 最近搜索</div>
+        <div class="recent-list">
+          ${recentSearches.slice(0, 12).map(s => `<div class="recent-item" onclick="quickSearch('${escapeHtml(s).replace(/'/g,"\\'")}')">${escapeHtml(s)}</div>`).join('')}
+        </div>
+      ` : ''}
+
+      ${favCount > 0 ? `
+        <div class="section-title">⭐️ 最近收藏</div>
+        <div class="recent-list">
+          ${recentFavChars.map(cp => {
+            const ch = safeChr(cp);
+            return ch ? `<div class="recent-item" onclick="showDetail(${cp})">${escapeHtml(ch)}</div>` : '';
+          }).join('')}
+        </div>
+      ` : ''}
+
+      ${historyRecent.length > 0 ? `
+        <div class="section-title">📜️ 最近浏览</div>
+        <div class="recent-list">
+          ${historyRecent.map(cp => {
+            const ch = safeChr(cp);
+            return ch ? `<div class="recent-item" onclick="showDetail(${cp})">${escapeHtml(ch)}</div>` : '';
+          }).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `;
+  document.getElementById('pagination').innerHTML = '';
+  setCount('');
+  document.getElementById('contentScroll').scrollTop = 0;
+}
+
 // ============================================================
 function showBlocks() {
   currentView = 'blocks';
@@ -5177,12 +5371,17 @@ function toggleFavModal(cp) {
   showDetail(cp);
   if (currentView === 'favorites') { renderFavorites(); }
   else if (currentView === 'random') { renderRandomGrid(); }
+  else if (currentView === 'search') { /* 搜索页面不刷新 */ }
   else if (currentChars.length > 0) { renderGrid(); }
 }
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 1500);
+  t.classList.remove('show');
+  // 强制重排以重新触发动画
+  void t.offsetWidth;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
 }
 
 // ============================================================
@@ -5401,6 +5600,14 @@ function renderSettingsBody() {
     </div>
 
     <div class="settings-section">
+      <h3>🎨 动画效果</h3>
+      <p>开启后界面有过渡动画效果，关闭则响应更快。</p>
+      <button class="${!animationEnabled ? 'settings-reset-btn' : ''}" onclick="toggleAnim()" style="padding:8px 24px;font-size:16px;${!animationEnabled ? 'background:#6c757d;color:white;border:none' : ''}">
+        ${animationEnabled ? '🟢 动画（开启）' : '⚪ 动画（关闭）'}
+      </button>
+    </div>
+
+    <div class="settings-section">
       <h3>💬 反馈与联系</h3>
       <p>有任何问题或建议，欢迎通过以下方式联系我：</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
@@ -5465,6 +5672,21 @@ function toggleTheme() {
   document.body.classList.toggle('dark', document.getElementById('themeSwitch').checked);
 }
 
+// 动画效果开关
+function applyAnimSetting() {
+  if (!animationEnabled) {
+    document.body.classList.add('no-animations');
+  } else {
+    document.body.classList.remove('no-animations');
+  }
+}
+function toggleAnim() {
+  animationEnabled = !animationEnabled;
+  localStorage.setItem('unicode_anim', animationEnabled ? 'on' : 'off');
+  applyAnimSetting();
+  refreshSettingsDisplay();
+}
+
 // ============================================================
 // 收藏快捷操作（从主页面）
 // ============================================================
@@ -5483,14 +5705,17 @@ function toggleFavorite(cp) {
   updateFavCount();
   if (currentView === 'favorites') { renderFavorites(); }
   else if (currentView === 'random') { renderRandomGrid(); }
-  else renderGrid();
+  else if (currentView === 'search') { /* 搜索页面不刷新，保持当前状态 */ }
+  else if (currentView === 'overview') { showOverview(); }
+  else if (currentChars.length > 0) { renderGrid(); }
 }
 
 // ============================================================
 // 初始化
 // ============================================================
-showBlocks();
+showOverview();
 updateFavCount();
+applyAnimSetting();
 // 异步加载已存储的 Unicode 数据（不阻塞初始渲染）
 loadStoredUnicodeData().then(() => {
   // 数据加载完成后无需重新渲染，所有查询函数会动态检查 unicodeData
