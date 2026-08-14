@@ -488,6 +488,25 @@ button, input, select, textarea, .sp-mode, .tp-btn, .file-upload-btn {
 }
 .control-bar button.toggle-btn:hover:not(.active) { background: #e9ecef; }
 .control-bar .ctrl-label { font-size: 13px; color: var(--muted); }
+.control-bar .ctrl-batch-fav {
+  background: var(--accent); color: #fff;
+  border: 1px solid var(--accent); border-radius: 8px;
+  padding: 7px 16px; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .15s;
+}
+.control-bar .ctrl-batch-fav:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.control-bar .ctrl-batch-fav.warn {
+  background: #fff; color: #e53935; border-color: #e53935;
+}
+.control-bar .ctrl-batch-fav.warn:hover { background: #fdecea; }
+.control-bar .ctrl-fav-progress {
+  font-size: 12px; color: var(--muted);
+  font-family: Consolas, monospace;
+  background: var(--card); padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--border);
+}
+body.dark .control-bar .ctrl-batch-fav.warn { background: #2a1620; color: #ff7c7c; border-color: #b93a3a; }
+body.dark .control-bar .ctrl-batch-fav.warn:hover { background: #3a1e2a; }
 
 .content-scroll {
   flex: 1; overflow-y: auto; overflow-x: hidden;
@@ -1030,7 +1049,6 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
   <button class="nav-btn" data-view="all" onclick="showAllChars()">🔠 全部字符</button>
   <button class="nav-btn" data-view="random" onclick="showRandom()">🎲️ 随机字符</button>
   <button class="nav-btn" data-view="blocks" onclick="showBlocks()">📂️ 按区块浏览</button>
-  <button class="nav-btn" data-view="categories" onclick="showCategories()">🏷️ 按类别浏览</button>
   <button class="nav-btn" data-view="history" onclick="showHistory()">📜️ 浏览记录</button>
   <button class="nav-btn" data-view="favorites" onclick="showFavorites()">⭐️ 我的收藏</button>
   <div class="sep"></div>
@@ -3907,6 +3925,74 @@ function jumpToUnicode(raw) {
   }, 100);
 }
 
+// 渲染网格视图的控制栏（本页批量收藏按钮）
+// pageCps: 当前页的字符数组
+function renderGridControlBar(pageCps) {
+  if (!pageCps || !pageCps.length) { clearControlBar(); return; }
+  // 除收藏视图外，其余视图都显示批量收藏按钮
+  if (currentView === 'favorites') { clearControlBar(); return; }
+  const total = pageCps.length;
+  let favCount = 0;
+  for (const cp of pageCps) if (favorites.has(cp)) favCount++;
+  const allFav = favCount === total;
+  const noneFav = favCount === 0;
+  const bar = document.getElementById('controlBar');
+  bar.innerHTML = `
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; width:100%">
+      <button class="ctrl-batch-fav ${allFav?'warn':''}" onclick="batchFavPage(${allFav?'false':'true'})" title="${allFav?'取消本页全部收藏':'收藏本页全部字符'}">
+        ${allFav?'☆ 取消本页收藏':'⭐ 收藏本页'}
+      </button>
+      <span class="ctrl-fav-progress" title="当前页收藏数">
+        ${noneFav ? '' : '⭐'} ${favCount} / ${total} 已收藏
+      </span>
+      ${favCount>0 && favCount<total ? `
+        <button class="toggle-btn" onclick="batchFavPage(true)" style="margin-left:auto">收藏未收藏的 ${total-favCount} 个</button>
+      `:''}
+    </div>
+  `;
+  bar.style.display = 'flex';
+}
+
+// 批量收藏/取消收藏当前页
+// add: true=收藏 false=取消
+function batchFavPage(add) {
+  let pageCps;
+  if (currentView === 'all') {
+    buildAllSegIndex();
+    const start = currentPage * PAGE_SIZE;
+    pageCps = getAllCharsPage(start, PAGE_SIZE);
+  } else {
+    const start = currentPage * PAGE_SIZE;
+    pageCps = currentChars.slice(start, start + PAGE_SIZE);
+  }
+  if (!pageCps || !pageCps.length) return;
+  let changed = 0;
+  for (const cp of pageCps) {
+    if (add) {
+      if (!favorites.has(cp)) { favorites.add(cp); changed++; }
+    } else {
+      if (favorites.has(cp)) { favorites.delete(cp); changed++; }
+    }
+  }
+  saveFavorites();
+  updateFavCount();
+  renderGridControlBar(pageCps);
+  addLog(add ? '批量收藏' : '批量取消收藏', `${changed} 个字符（当前页）`);
+  showToast(add ? `已收藏 ${changed} 个字符` : `已取消收藏 ${changed} 个字符`);
+  // 重新渲染网格以更新星星图标（不滚动）
+  const savedScrollTop = document.getElementById('contentScroll').scrollTop;
+  const el = document.getElementById('content');
+  const grid = el.querySelector('.grid');
+  if (grid) {
+    let html = '';
+    pageCps.forEach((cp, i) => { html += renderCell(cp, i); });
+    grid.innerHTML = html;
+  }
+  document.getElementById('contentScroll').scrollTop = savedScrollTop;
+  // 收藏视图需要同步刷新
+  if (currentView === 'favorites') renderFavorites();
+}
+
 function renderGrid() {
   const el = document.getElementById('content');
 
@@ -3917,7 +4003,7 @@ function renderGrid() {
     if (total <= 0) {
       el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">暂无字符</div>';
       document.getElementById('pagination').innerHTML = '';
-      setCount(''); return;
+      setCount(''); clearControlBar(); return;
     }
     const totalPages = Math.ceil(total / PAGE_SIZE);
     const start = currentPage * PAGE_SIZE;
@@ -3927,6 +4013,7 @@ function renderGrid() {
 
     setCount(`共 ${total.toLocaleString()} 个字符`);
     renderPagination(totalPages);
+    renderGridControlBar(page);
 
     let html = '<div class="grid">';
     page.forEach((cp, i) => { html += renderCell(cp, i); });
@@ -3938,7 +4025,7 @@ function renderGrid() {
   if (!currentChars.length) {
     el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">暂无字符</div>';
     document.getElementById('pagination').innerHTML = '';
-    setCount(''); return;
+    setCount(''); clearControlBar(); return;
   }
   const totalPages = Math.ceil(currentChars.length / PAGE_SIZE);
   const start = currentPage * PAGE_SIZE;
@@ -3946,6 +4033,7 @@ function renderGrid() {
 
   setCount(`共 ${currentChars.length} 个字符`);
   renderPagination(totalPages);
+  renderGridControlBar(page);
 
   let html = '<div class="grid">';
   page.forEach((cp, i) => { html += renderCell(cp, i); });
@@ -3993,7 +4081,7 @@ function renderCell(cp, animIdx) {
   return `
     <div class="cell cell-enter ${warnClasses.join(' ')}" ${animStyle} onclick="showDetail(${cp})">
       ${badge}
-      <span class="quick-fav ${isFav?'on':''}" onclick="event.stopPropagation();toggleFavorite(${cp})">${isFav?'★':'☆'}</span>
+      <span class="quick-fav ${isFav?'on':''}" title="${isFav?'已收藏':'未收藏'}">${isFav?'★':'☆'}</span>
       <span class="${chClass}">${escapeHtml(display)}</span>
       <span class="cp">U+${cp.toString(16).toUpperCase().padStart(4,'0')}</span>
     </div>`;
@@ -4242,10 +4330,6 @@ function showOverview() {
           <span class="ql-icon">📂️</span>
           <span class="ql-name">区块浏览</span>
         </div>
-        <div class="quick-link" onclick="showCategories()">
-          <span class="ql-icon">🏷️</span>
-          <span class="ql-name">类别浏览</span>
-        </div>
         <div class="quick-link" onclick="showCompare()">
           <span class="ql-icon">⚖️</span>
           <span class="ql-name">字符对比</span>
@@ -4400,52 +4484,6 @@ function showBlockChars(blockIdx) {
   for (let cp = start; cp <= end; cp++) if (safeChr(cp)) chars.push(cp);
   currentChars = chars; currentPage = 0;
   setTitle(`📂 ${cn}`);
-  setCount('');
-  clearControlBar();
-  renderGrid();
-  document.getElementById('contentScroll').scrollTop = 0;
-}
-
-// ============================================================
-// 视图 - 按类别浏览
-// ============================================================
-function showCategories() {
-  currentView = 'categories';
-  currentChars = [];
-  setTitle('🏷️ 按 Unicode 类别浏览');
-  setActiveNav('categories');
-  clearControlBar();
-  buildCategoryIndex();
-  const items = [];
-  for (const cat of Object.keys(CATEGORY_INFO).sort()) {
-    const cnt = (categoryIndex[cat]||[]).length;
-    items.push({
-      id: `'${cat}'`,
-      title: CATEGORY_INFO[cat][0],
-      desc: `${CATEGORY_INFO[cat][1]} (${cat})${cnt?` — ${cnt} 个字符`:''}`
-    });
-  }
-  const el = document.getElementById('content');
-  let html = '';
-  for (const item of items) {
-    html += `
-      <div class="list-item" onclick="showCategoryChars('${item.id.slice(1,-1)}')">
-        <div class="title">${item.title}</div>
-        <div class="desc">${item.desc}</div>
-      </div>`;
-  }
-  el.innerHTML = html;
-  document.getElementById('pagination').innerHTML = '';
-  setCount('');
-  document.getElementById('contentScroll').scrollTop = 0;
-}
-
-function showCategoryChars(catCode) {
-  buildCategoryIndex();
-  currentChars = categoryIndex[catCode] || [];
-  currentPage = 0;
-  const catCn = CATEGORY_INFO[catCode][0];
-  setTitle(`🏷️ ${catCn} (${catCode})`);
   setCount('');
   clearControlBar();
   renderGrid();
