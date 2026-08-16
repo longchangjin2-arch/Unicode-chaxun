@@ -6270,6 +6270,14 @@ function renderSettingsBody() {
   }[unicodeData.source] || unicodeData.source;
 
   document.getElementById('settingsBody').innerHTML = `
+    <div class="settings-section" style="background:var(--bg);border:1px solid #f0ad4e;border-left:4px solid #f0ad4e;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+      <h3 style="color:#f0ad4e;margin-top:0">⚠️ 使用前请先清空数据</h3>
+      <p style="font-size:13px;line-height:1.7;margin:0;color:var(--text)">
+        本 HTML 文件可能被作者嵌入了个人的收藏、自定义字义、浏览记录等数据。为确保你看到的是干净初始状态，<b>首次使用前请到「数据管理」中执行「清空所有数据」</b>，避免加载他人数据。
+      </p>
+      <button class="toggle-btn" style="margin-top:10px;background:#f0ad4e;color:#fff;border:none" onclick="clearAllUserData()">🧹 立即清空所有数据</button>
+    </div>
+
     <div class="settings-section">
       <h3>📦 Unicode 数据库</h3>
       <div class="settings-row">
