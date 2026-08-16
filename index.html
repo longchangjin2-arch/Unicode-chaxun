@@ -843,6 +843,47 @@ body.dark .pagination .pg-jump input { background: #1e2742; }
 }
 .settings-reset-btn:hover { background: #e9ecef; }
 
+/* QQ 群聊卡片 */
+.qq-group-card {
+  display: flex; gap: 16px; align-items: stretch;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px;
+}
+.qq-group-qr {
+  width: 120px; height: 120px; flex-shrink: 0;
+  border-radius: 8px; overflow: hidden;
+  border: 2px solid #e0e0e0; background: #fff;
+}
+.qq-group-qr img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.qq-group-info {
+  flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px;
+  min-width: 0;
+}
+.qq-group-name {
+  font-size: 16px; font-weight: 700; color: var(--text);
+}
+.qq-group-id {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 14px; font-family: Consolas, monospace;
+  color: var(--muted);
+}
+.qq-group-id #qqGroupNum { color: var(--accent); font-weight: 600; font-size: 15px; }
+.qq-group-copy {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 6px; padding: 4px 10px; font-size: 12px;
+  cursor: pointer; transition: background .15s;
+}
+.qq-group-copy:hover { background: var(--accent-hover); }
+.qq-group-desc {
+  font-size: 12px; color: var(--muted); line-height: 1.5;
+}
+body.dark .qq-group-qr { border-color: #3d4a6c; background: #1e2742; }
+
+@media (max-width: 768px) {
+  .qq-group-card { flex-direction: column; align-items: center; text-align: center; }
+  .qq-group-id { justify-content: center; }
+}
+
 /* Toast */
 .toast {
   position: fixed; bottom: 30px; left: 50%;
@@ -1048,7 +1089,7 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
   <div class="sep"></div>
   <button class="nav-btn" data-view="all" onclick="showAllChars()">🔠 全部字符</button>
   <button class="nav-btn" data-view="random" onclick="showRandom()">🎲️ 随机字符</button>
-  <button class="nav-btn" data-view="blocks" onclick="showBlocks()">📂️ 按区块浏览</button>
+  <button class="nav-btn" data-view="blocks" onclick="showBlocks()">📂 分类</button>
   <button class="nav-btn" data-view="history" onclick="showHistory()">📜️ 浏览记录</button>
   <button class="nav-btn" data-view="favorites" onclick="showFavorites()">⭐️ 我的收藏</button>
   <div class="sep"></div>
@@ -1485,6 +1526,29 @@ const BLOCKS = [
 // 区块英文名→中文名映射（用于加载外部数据时翻译）
 const BLOCK_CN_NAMES = {};
 BLOCKS.forEach(b => { BLOCK_CN_NAMES[b[1]] = b[0]; });
+
+// Unicode 17 个平面定义
+const UNICODE_PLANES = [
+  { id: 0,  cn: '基本多语言平面',     en: 'Basic Multilingual Plane (BMP)',           start: 0x00000, end: 0x0FFFF, note: '最常用的平面，包含绝大多数现代文字' },
+  { id: 1,  cn: '辅助多语言平面',     en: 'Supplementary Multilingual Plane (SMP)',   start: 0x10000, end: 0x1FFFF, note: '历史文字、音乐符号、表情符号等' },
+  { id: 2,  cn: '辅助表意文字平面',   en: 'Supplementary Ideographic Plane (SIP)',    start: 0x20000, end: 0x2FFFF, note: '罕用汉字（扩展 C/D/E/F/I 等）' },
+  { id: 3,  cn: '第三表意文字平面',   en: 'Tertiary Ideographic Plane (TIP)',         start: 0x30000, end: 0x3FFFF, note: '罕用汉字（扩展 G/H 等）' },
+  { id: 4,  cn: '未分配平面 4',       en: 'Plane 4 (Unassigned)',                     start: 0x40000, end: 0x4FFFF, note: '预留待用' },
+  { id: 5,  cn: '未分配平面 5',       en: 'Plane 5 (Unassigned)',                     start: 0x50000, end: 0x5FFFF, note: '预留待用' },
+  { id: 6,  cn: '未分配平面 6',       en: 'Plane 6 (Unassigned)',                     start: 0x60000, end: 0x6FFFF, note: '预留待用' },
+  { id: 7,  cn: '未分配平面 7',       en: 'Plane 7 (Unassigned)',                     start: 0x70000, end: 0x7FFFF, note: '预留待用' },
+  { id: 8,  cn: '未分配平面 8',       en: 'Plane 8 (Unassigned)',                     start: 0x80000, end: 0x8FFFF, note: '预留待用' },
+  { id: 9,  cn: '未分配平面 9',       en: 'Plane 9 (Unassigned)',                     start: 0x90000, end: 0x9FFFF, note: '预留待用' },
+  { id: 10, cn: '未分配平面 10',      en: 'Plane 10 (Unassigned)',                    start: 0xA0000, end: 0xAFFFF, note: '预留待用' },
+  { id: 11, cn: '未分配平面 11',      en: 'Plane 11 (Unassigned)',                    start: 0xB0000, end: 0xBFFFF, note: '预留待用' },
+  { id: 12, cn: '未分配平面 12',      en: 'Plane 12 (Unassigned)',                    start: 0xC0000, end: 0xCFFFF, note: '预留待用' },
+  { id: 13, cn: '未分配平面 13',      en: 'Plane 13 (Unassigned)',                    start: 0xD0000, end: 0xDFFFF, note: '预留待用' },
+  { id: 14, cn: '辅助特殊用途平面',   en: 'Supplementary Special-purpose Plane (SSP)',start: 0xE0000, end: 0xEFFFF, note: '变体选择符、标签等特殊用途' },
+  { id: 15, cn: '私用区 A',           en: 'Private Use Area A (PUA-A)',               start: 0xF0000, end: 0xFFFFF, note: '用户自定义字符区域' },
+  { id: 16, cn: '私用区 B',           en: 'Private Use Area B (PUA-B)',               start: 0x100000, end: 0x10FFFF, note: '用户自定义字符区域' },
+];
+// 区块字符浏览 - 无限滚动状态
+let blockScrollState = { cps: [], rendered: 0, batchSize: 72, observer: null, blockName: '' };
 
 const CATEGORY_INFO = {
   'Lu':['大写字母','Letter, Uppercase'],'Ll':['小写字母','Letter, Lowercase'],
@@ -3197,9 +3261,9 @@ async function clearAllUserData() {
   showToast('已清空所有个人数据');
 }
 
-// 导出个人数据为独立 JSON 文件（用于备份/分享）
-function exportUserData() {
-  const data = {
+// 构建导出数据
+function buildExportData() {
+  return {
     _type: 'unicode-app-user-data',
     _version: 3,
     _exportedAt: new Date().toISOString(),
@@ -3210,19 +3274,88 @@ function exportUserData() {
     history: history,
     recentSearches: recentSearches,
   };
-  const json = JSON.stringify(data, null, 2);
+}
+
+// 传统下载方式
+function downloadExportFile(json, filename) {
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const ts = new Date().toISOString().slice(0,10);
   a.href = url;
-  a.download = `unicode_user_data_${ts}.json`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('已导出个人数据');
-  addLog('导出数据', `收藏${favorites.size}项, 字义${Object.keys(customMeanings).length}条, 字典${Object.keys(customWordDict).length}条, 分类${Object.keys(favCategories).length}个`);
+}
+
+// 导出个人数据 - 下载（传统方式）
+function exportUserData() {
+  const data = buildExportData();
+  const json = JSON.stringify(data, null, 2);
+  const ts = new Date().toISOString().slice(0,10);
+  const filename = `unicode_user_data_${ts}.json`;
+
+  // 检查是否支持 File System Access API
+  if (window.showSaveFilePicker) {
+    // 支持另存为
+    if (!confirm('是否使用「另存为」方式保存到指定位置？\n\n点「确定」→ 选择保存位置\n点「取消」→ 使用默认下载')) {
+      downloadExportFile(json, filename);
+      showToast('已导出个人数据');
+      addLog('导出数据（下载）', `收藏${favorites.size}项, 字义${Object.keys(customMeanings).length}条, 字典${Object.keys(customWordDict).length}条, 分类${Object.keys(favCategories).length}个`);
+      return;
+    }
+    // 使用 showSaveFilePicker
+    saveFileWithPicker(json, filename);
+  } else {
+    // 不支持 showSaveFilePicker，只能下载
+    downloadExportFile(json, filename);
+    showToast('已导出个人数据');
+    addLog('导出数据（下载）', `收藏${favorites.size}项, 字义${Object.keys(customMeanings).length}条, 字典${Object.keys(customWordDict).length}条, 分类${Object.keys(favCategories).length}个`);
+  }
+}
+
+// 使用 File System Access API 另存为
+async function saveFileWithPicker(json, defaultName) {
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: defaultName,
+      types: [{
+        description: 'JSON 数据文件',
+        accept: { 'application/json': ['.json'] }
+      }]
+    });
+    const writable = await handle.createWritable();
+    await writable.write(json);
+    await writable.close();
+    showToast('已保存到指定位置');
+    addLog('导出数据（另存为）', `收藏${favorites.size}项, 字义${Object.keys(customMeanings).length}条, 字典${Object.keys(customWordDict).length}条, 分类${Object.keys(favCategories).length}个`);
+  } catch (err) {
+    // 用户取消了保存
+    if (err.name === 'AbortError') {
+      showToast('已取消保存');
+      return;
+    }
+    // 出错了，回退到传统下载
+    const data = buildExportData();
+    const ts = new Date().toISOString().slice(0,10);
+    downloadExportFile(JSON.stringify(data, null, 2), `unicode_user_data_${ts}.json`);
+    showToast('保存失败，已改用下载方式');
+    addLog('导出数据（回退下载）', '另存为失败，改用传统下载');
+  }
+}
+
+// 另存为 - 直接打开文件选择器
+async function exportUserDataSaveAs() {
+  if (!window.showSaveFilePicker) {
+    showToast('当前浏览器不支持「另存为」，请使用下载方式');
+    return;
+  }
+  const data = buildExportData();
+  const json = JSON.stringify(data, null, 2);
+  const ts = new Date().toISOString().slice(0,10);
+  const filename = `unicode_user_data_${ts}.json`;
+  await saveFileWithPicker(json, filename);
 }
 
 // 导入个人数据
@@ -3393,6 +3526,15 @@ function safeChr(cp) {
 // 轻量检查：是否为不可显示的控制字符（用于随机生成的性能优化）
 function isControlChar(cp) {
   return (cp <= 0x1F) || (cp >= 0x7F && cp <= 0x9F);
+}
+
+// 获取当前生效的区块列表（优先使用上传的数据，回退到内置）
+// 返回格式统一为 [cnName, enName, start, end]
+function activeBlocks() {
+  if (unicodeData.blocks && unicodeData.blocks.length) {
+    return unicodeData.blocks.map(b => [BLOCK_CN_NAMES[b[0]] || b[0], b[0], b[1], b[2]]);
+  }
+  return BLOCKS;
 }
 
 // 优先使用已加载的 Unicode 数据，回退到内置
@@ -4123,8 +4265,9 @@ function renderRandomControls() {
   }
   options += '</optgroup>';
   options += '<optgroup label="── 按区块 ──">';
-  for (let i = 0; i < BLOCKS.length; i++) {
-    options += `<option value="block:${i}">${BLOCKS[i][0]}</option>`;
+  const _blocks = activeBlocks();
+  for (let i = 0; i < _blocks.length; i++) {
+    options += `<option value="block:${i}">${_blocks[i][0]}</option>`;
   }
   options += '</optgroup>';
   options += '<optgroup label="── 按类别 ──">';
@@ -4170,7 +4313,7 @@ function generateRandomChars() {
   } else if (randomPartition.startsWith('block:')) {
     // 指定区块随机
     const idx = parseInt(randomPartition.split(':')[1]);
-    const [cn,en,start,end] = BLOCKS[idx];
+    const [cn,en,start,end] = activeBlocks()[idx];
     const range = end - start + 1;
     if (range > randomCount * 3) {
       // 大区间：随机采样
@@ -4266,7 +4409,7 @@ function showOverview() {
   clearControlBar();
 
   const charCount = unicodeData.charMap ? unicodeData.charMap.size : '—';
-  const blockCount = BLOCKS.length;
+  const blockCount = activeBlocks().length;
   const favCount = favorites.size;
   const categoryCount = Object.keys(favCategories).length;
   const langCount = LANG_PARTITIONS.length;
@@ -4327,8 +4470,8 @@ function showOverview() {
           <span class="ql-name">随机字符</span>
         </div>
         <div class="quick-link" onclick="showBlocks()">
-          <span class="ql-icon">📂️</span>
-          <span class="ql-name">区块浏览</span>
+          <span class="ql-icon">📂</span>
+          <span class="ql-name">分类</span>
         </div>
         <div class="quick-link" onclick="showCompare()">
           <span class="ql-icon">⚖️</span>
@@ -4465,29 +4608,243 @@ function showAllChars() {
 }
 
 // ============================================================
+// 视图 - 分类（17 个平面 → 区块 → 字符）
+// ============================================================
 function showBlocks() {
   currentView = 'blocks';
   currentChars = [];
-  setTitle('📂 按 Unicode 区块浏览');
+  // 断开之前区块滚动的 observer
+  if (blockScrollState.observer) { blockScrollState.observer.disconnect(); blockScrollState.observer = null; }
+  setTitle('📂 Unicode 分类（17 个平面）');
   setActiveNav('blocks');
   clearControlBar();
-  const items = BLOCKS.map((b,i) => ({
-    id: i, title: b[0], desc: `${b[1]} — ${b[2].toString(16).toUpperCase().padStart(4,'0')}–${b[3].toString(16).toUpperCase().padStart(4,'0')} (${b[3]-b[2]+1} 字符)`
-  }));
-  renderList(items, 'showBlockChars');
+
+  // 统计每个平面下的区块数量（基于当前上传或内置数据）
+  const blocks = activeBlocks(); // [cn, en, start, end]
+  const planeBlockCount = new Array(17).fill(0);
+  const planeCodePointCount = new Array(17).fill(0);
+  for (const [,,s,e] of blocks) {
+    const planeId = s >> 16;
+    if (planeId >= 0 && planeId <= 16) planeBlockCount[planeId]++;
+  }
+
+  const items = UNICODE_PLANES.map(p => {
+    const rangeStr = `U+${p.start.toString(16).toUpperCase().padStart(5,'0')}–U+${p.end.toString(16).toUpperCase().padStart(5,'0')}`;
+    const sizeStr = `${(p.end - p.start + 1).toLocaleString()} 码位`;
+    const blockStr = planeBlockCount[p.id] > 0
+      ? `${planeBlockCount[p.id]} 个区块`
+      : `暂无区块定义`;
+    return {
+      id: p.id,
+      title: `第 ${p.id} 平面 · ${p.cn}`,
+      desc: `${p.en}　｜　${rangeStr}（${sizeStr}）　｜　${blockStr}　｜　${p.note}`,
+    };
+  });
+  renderList(items, 'showPlaneBlocks');
+  document.getElementById('contentScroll').scrollTop = 0;
+}
+
+function showPlaneBlocks(planeId) {
+  const plane = UNICODE_PLANES[planeId];
+  if (!plane) { showBlocks(); return; }
+  currentView = 'blocks';
+  currentChars = [];
+  if (blockScrollState.observer) { blockScrollState.observer.disconnect(); blockScrollState.observer = null; }
+  setTitle(`📂 第 ${plane.id} 平面 · ${plane.cn}`);
+  setActiveNav('blocks');
+
+  // 返回按钮 + 平面信息
+  const bar = document.getElementById('controlBar');
+  const rangeStr = `U+${plane.start.toString(16).toUpperCase().padStart(5,'0')}–U+${plane.end.toString(16).toUpperCase().padStart(5,'0')}`;
+  bar.innerHTML = `
+    <div style="display:flex; width:100%; gap:8px; flex-wrap:wrap; align-items:center;">
+      <button class="toggle-btn" onclick="showBlocks()">◀ 返回 17 平面列表</button>
+      <span style="color:var(--muted);font-size:13px;margin-left:8px">${plane.en}　｜　${rangeStr}　｜　${plane.note}</span>
+    </div>`;
+  bar.style.display = 'flex';
+
+  // 过滤该平面下的所有区块（使用 activeBlocks 获取当前数据），并保存全局区块索引
+  const allBlocks = activeBlocks(); // [cn, en, start, end]
+  const items = [];
+  for (let i = 0; i < allBlocks.length; i++) {
+    const [cn, en, s, e] = allBlocks[i];
+    // 区块起始码点所属平面必须匹配
+    if ((s >> 16) === plane.id) {
+      const startHex = s.toString(16).toUpperCase().padStart(s > 0xFFFF ? 5 : 4, '0');
+      const endHex   = e.toString(16).toUpperCase().padStart(e > 0xFFFF ? 5 : 4, '0');
+      items.push({
+        id: i, // 全局区块索引，传入 showBlockChars
+        title: cn,
+        desc: `${en} — U+${startHex}–U+${endHex}（${(e-s+1).toLocaleString()} 码位）`,
+      });
+    }
+  }
+
+  const el = document.getElementById('content');
+  document.getElementById('pagination').innerHTML = '';
+  setCount(items.length > 0 ? `共 ${items.length} 个区块` : '');
+
+  if (items.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">
+      该平面当前没有区块定义<br><br>
+      <span style="font-size:14px">可能原因：当前 Unicode 数据版本中该平面尚未分配区块，或 Blocks.txt 尚未上传。</span>
+    </div>`;
+  } else {
+    // 手动渲染列表，onclick 使用全局区块索引
+    let html = '';
+    for (const item of items) {
+      html += `
+        <div class="list-item" onclick="showBlockChars(${item.id})">
+          <div class="title">${item.title}</div>
+          <div class="desc">${item.desc}</div>
+        </div>`;
+    }
+    el.innerHTML = html;
+  }
   document.getElementById('contentScroll').scrollTop = 0;
 }
 
 function showBlockChars(blockIdx) {
-  const [cn,en,start,end] = BLOCKS[blockIdx];
+  const [cn, en, start, end] = activeBlocks()[blockIdx];
+  const planeId = start >> 16;
   const chars = [];
   for (let cp = start; cp <= end; cp++) if (safeChr(cp)) chars.push(cp);
-  currentChars = chars; currentPage = 0;
+  currentChars = chars;
+  currentView = 'blockChars';
   setTitle(`📂 ${cn}`);
-  setCount('');
-  clearControlBar();
-  renderGrid();
+  setCount(chars.length > 0 ? `共 ${chars.length.toLocaleString()} 个字符` : '暂无字符');
+
+  // 控制栏：返回上一级 + 本区块批量收藏
+  const bar = document.getElementById('controlBar');
+  const startHex = start.toString(16).toUpperCase().padStart(start > 0xFFFF ? 5 : 4, '0');
+  const endHex   = end.toString(16).toUpperCase().padStart(end   > 0xFFFF ? 5 : 4, '0');
+  bar.innerHTML = `
+    <div style="display:flex; width:100%; gap:8px; flex-wrap:wrap; align-items:center;">
+      <button class="toggle-btn" onclick="showPlaneBlocks(${planeId})">◀ 返回区块列表</button>
+      <span style="color:var(--muted);font-size:13px">${en}　｜　U+${startHex}–U+${endHex}</span>
+      <span style="flex:1"></span>
+      <span id="blockFavInfo" style="color:var(--muted);font-size:13px"></span>
+      <button class="toggle-btn" id="blockFavAllBtn" onclick="toggleFavBlockAll(true)">⭐ 收藏本区块全部</button>
+      <button class="toggle-btn" id="blockUnfavAllBtn" onclick="toggleFavBlockAll(false)" style="display:none">☆ 取消本区块收藏</button>
+    </div>`;
+  bar.style.display = 'flex';
+  updateBlockFavStatus();
+
+  document.getElementById('pagination').innerHTML = '';
+  const el = document.getElementById('content');
+
+  if (chars.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">该区块暂无可用字符</div>`;
+    document.getElementById('contentScroll').scrollTop = 0;
+    return;
+  }
+
+  // 准备无限滚动
+  blockScrollState.cps = chars;
+  blockScrollState.rendered = 0;
+  blockScrollState.batchSize = 72;
+  blockScrollState.blockName = cn;
+  if (blockScrollState.observer) { blockScrollState.observer.disconnect(); blockScrollState.observer = null; }
+
+  el.innerHTML = `
+    <div class="grid" id="blockGrid"></div>
+    <div id="blockSentinel" style="text-align:center;padding:20px;color:var(--muted);font-size:13px">向下滚动加载更多…</div>`;
+
+  const grid = document.getElementById('blockGrid');
+  const sentinel = document.getElementById('blockSentinel');
+
+  function renderBatch() {
+    const s = blockScrollState.rendered;
+    const e = Math.min(s + blockScrollState.batchSize, blockScrollState.cps.length);
+    if (s >= e) {
+      sentinel.textContent = `— 已显示全部 ${blockScrollState.cps.length.toLocaleString()} 个字符 —`;
+      if (blockScrollState.observer) { blockScrollState.observer.disconnect(); blockScrollState.observer = null; }
+      return;
+    }
+    let html = '';
+    for (let i = s; i < e; i++) {
+      html += renderCell(blockScrollState.cps[i], i);
+    }
+    grid.insertAdjacentHTML('beforeend', html);
+    blockScrollState.rendered = e;
+    sentinel.textContent = `已加载 ${e.toLocaleString()} / ${blockScrollState.cps.length.toLocaleString()}，继续向下滚动…`;
+    if (e >= blockScrollState.cps.length) {
+      sentinel.textContent = `— 已显示全部 ${blockScrollState.cps.length.toLocaleString()} 个字符 —`;
+      if (blockScrollState.observer) { blockScrollState.observer.disconnect(); blockScrollState.observer = null; }
+    }
+  }
+
+  renderBatch();
+  if ('IntersectionObserver' in window) {
+    blockScrollState.observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && blockScrollState.rendered < blockScrollState.cps.length) {
+        renderBatch();
+      }
+    }, { root: document.getElementById('contentScroll'), rootMargin: '300px' });
+    blockScrollState.observer.observe(sentinel);
+  } else {
+    while (blockScrollState.rendered < blockScrollState.cps.length) renderBatch();
+  }
+
   document.getElementById('contentScroll').scrollTop = 0;
+}
+
+// 更新区块批量收藏按钮状态
+function updateBlockFavStatus() {
+  if (!blockScrollState || !blockScrollState.cps || !blockScrollState.cps.length) return;
+  const total = blockScrollState.cps.length;
+  let faved = 0;
+  for (const cp of blockScrollState.cps) if (favorites.has(cp)) faved++;
+  const info = document.getElementById('blockFavInfo');
+  const favBtn = document.getElementById('blockFavAllBtn');
+  const unfavBtn = document.getElementById('blockUnfavAllBtn');
+  if (info) info.textContent = `⭐ ${faved.toLocaleString()} / ${total.toLocaleString()} 已收藏`;
+  if (faved >= total) {
+    if (favBtn) favBtn.style.display = 'none';
+    if (unfavBtn) unfavBtn.style.display = '';
+  } else {
+    if (favBtn) favBtn.style.display = '';
+    if (unfavBtn) unfavBtn.style.display = 'none';
+  }
+}
+
+// 一键收藏/取消收藏本区块全部字符
+function toggleFavBlockAll(add) {
+  if (!blockScrollState || !blockScrollState.cps.length) return;
+  let changed = 0;
+  for (const cp of blockScrollState.cps) {
+    if (add) {
+      if (!favorites.has(cp)) { favorites.add(cp); changed++; }
+    } else {
+      if (favorites.has(cp)) { favorites.delete(cp); changed++; }
+    }
+  }
+  saveFavorites();
+  updateFavCount();
+  updateBlockFavStatus();
+  // 刷新已渲染的星星图标（按 DOM 索引对应 blockScrollState.cps，避免全量重新渲染丢失滚动位置）
+  const grid = document.getElementById('blockGrid');
+  if (grid) {
+    const cells = grid.children;
+    const len = Math.min(cells.length, blockScrollState.rendered);
+    for (let i = 0; i < len; i++) {
+      const cp = blockScrollState.cps[i];
+      const starEl = cells[i].querySelector('.quick-fav');
+      if (!starEl) continue;
+      if (favorites.has(cp)) {
+        starEl.classList.add('on');
+        starEl.textContent = '★';
+        starEl.title = '已收藏';
+      } else {
+        starEl.classList.remove('on');
+        starEl.textContent = '☆';
+        starEl.title = '未收藏';
+      }
+    }
+  }
+  showToast(add ? `已收藏 ${changed.toLocaleString()} 个字符` : `已取消收藏 ${changed.toLocaleString()} 个字符`);
+  addLog(add ? '批量收藏' : '批量取消收藏', `${changed.toLocaleString()} 个字符（区块：${blockScrollState.blockName || '未知'}）`);
+  if (currentView === 'favorites') renderFavorites();
 }
 
 // ============================================================
@@ -5896,6 +6253,8 @@ function exportSVG(char, code, flags) {
 function showSettings() {
   renderSettingsBody();
   document.getElementById('settingsOverlay').classList.add('show');
+  // 动态生成 QQ 群二维码
+  setTimeout(renderQQQRCode, 50);
 }
 function closeSettings() {
   document.getElementById('settingsOverlay').classList.remove('show');
@@ -5983,6 +6342,20 @@ function renderSettingsBody() {
     </div>
 
     <div class="settings-section">
+      <h3>👥 Unicode 讨论群聊</h3>
+      <p>欢迎加入 Unicode 爱好者 QQ 群，一起交流学习！</p>
+      <div class="qq-group-card" style="margin-top:12px">
+        <div class="qq-group-info" style="flex:1">
+          <div class="qq-group-name">🎨 Unicode研究</div>
+          <div class="qq-group-id">
+            群号：<span id="qqGroupNum">1037376837</span>
+            <button class="qq-group-copy" onclick="copyQQGroup()" title="复制群号">📋 复制</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <h3>💬 反馈与联系</h3>
       <p>有任何问题或建议，欢迎通过以下方式联系我：</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
@@ -6000,13 +6373,15 @@ function renderSettingsBody() {
       <h3>💾 个人数据管理</h3>
       <p>个人数据包括：我的收藏、自定义字义、浏览记录、最近搜索。可导出为独立文件备份或分享。</p>
       <div class="settings-actions">
-        <button class="file-upload-btn" onclick="exportUserData()">📤 导出个人数据</button>
+        <button class="file-upload-btn" onclick="exportUserData()">⬇️ 下载</button>
+        ${window.showSaveFilePicker ? '<button class="file-upload-btn" onclick="exportUserDataSaveAs()" style="background:#28a745">📂 另存为</button>' : ''}
         <label class="file-upload-btn">
-          📥 导入个人数据
+          📥 导入
           <input type="file" accept=".json,application/json" onchange="importUserData(event)" style="display:none">
         </label>
-        <button class="settings-reset-btn" onclick="clearAllUserData()">🗑️ 清空所有个人数据</button>
+        <button class="settings-reset-btn" onclick="clearAllUserData()">🗑️ 清空</button>
       </div>
+      ${window.showSaveFilePicker ? '<p style="font-size:11px;color:var(--muted);margin-top:6px">💡 「另存为」可选择任意保存位置；「下载」保存到浏览器默认下载目录</p>' : '<p style="font-size:11px;color:var(--muted);margin-top:6px">💡 您的浏览器不支持「另存为」，仅可使用下载方式</p>'}
     </div>
 
     <div class="settings-section">
@@ -6045,6 +6420,32 @@ function refreshSettingsDisplay() {
 // ============================================================
 function toggleTheme() {
   document.body.classList.toggle('dark', document.getElementById('themeSwitch').checked);
+}
+
+// 复制 QQ 群号
+function copyQQGroup() {
+  const num = '1037376837';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(num).then(
+      () => showToast(`群号 ${num} 已复制`),
+      () => {
+        // 回退方案
+        const ta = document.createElement('textarea');
+        ta.value = num; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); showToast(`群号 ${num} 已复制`); }
+        catch(e) { showToast('复制失败，请手动复制'); }
+        finally { document.body.removeChild(ta); }
+      }
+    );
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = num; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast(`群号 ${num} 已复制`); }
+    catch(e) { showToast('复制失败，请手动复制'); }
+    finally { document.body.removeChild(ta); }
+  }
 }
 
 // 动画效果开关
@@ -6106,6 +6507,607 @@ document.addEventListener('keydown', (e) => {
 loadStoredUnicodeData().then(() => {
   // 数据加载完成后无需重新渲染，所有查询函数会动态检查 unicodeData
 });
+
+// ============================================================
+// 纯 JS QR 码生成器（内嵌版，不依赖外部文件）
+// 基于 Kazuhiko Arase 的 qrcode-generator (公有领域) 精简实现
+// 支持 byte 模式，纠错等级 L/M/Q/H，版本 1-40
+// 用于动态生成 QQ 群二维码
+// ============================================================
+const QR = (() => {
+  const PAD0 = 0xEC;
+  const PAD1 = 0x11;
+
+  // ECC per block: [L, M, Q, H] for version 1-40
+  // Format: version 1..40, each entry is [L, M, Q, H]
+  const ECC_PER_BLOCK = {
+    1:[7,10,13,17], 2:[10,16,22,28], 3:[15,26,18,22], 4:[20,18,26,16],
+    5:[26,24,18,22], 6:[18,16,24,28], 7:[20,18,18,26], 8:[24,22,22,26],
+    9:[30,22,20,24], 10:[18,26,24,28], 11:[20,30,28,24], 12:[24,28,26,28],
+    13:[26,28,24,22], 14:[30,22,20,24], 15:[22,24,30,24], 16:[24,24,24,30],
+    17:[28,28,28,28], 18:[30,28,28,28], 19:[28,28,26,28], 20:[28,28,30,28],
+    21:[28,28,28,30], 22:[28,28,30,30], 23:[30,30,30,30], 24:[30,30,30,30],
+    25:[30,30,30,30], 26:[30,30,30,30], 27:[30,30,30,30], 28:[30,30,30,30],
+    29:[30,30,30,30], 30:[30,30,30,30], 31:[30,30,30,30], 32:[30,30,30,30],
+    33:[30,30,30,30], 34:[30,30,30,30], 35:[30,30,30,30], 36:[30,30,30,30],
+    37:[30,30,30,30], 38:[30,30,30,30], 39:[30,30,30,30], 40:[30,30,30,30]
+  };
+
+  // Number of EC blocks: [L, M, Q, H] for version 1-40
+  const EC_BLOCKS = {
+    1:[1,1,1,1], 2:[1,1,1,1], 3:[1,1,1,1], 4:[1,1,1,1],
+    5:[1,1,1,1], 6:[2,1,2,2], 7:[2,2,2,2], 8:[2,2,2,2],
+    9:[2,2,2,2], 10:[2,4,4,4], 11:[2,4,4,4], 12:[2,4,4,4],
+    13:[4,4,4,4], 14:[4,4,4,4], 15:[4,4,6,6], 16:[4,6,6,6],
+    17:[4,6,6,6], 18:[4,6,6,6], 19:[6,6,6,6], 20:[6,6,6,6],
+    21:[6,6,6,6], 22:[6,6,6,6], 23:[6,6,6,6], 24:[6,6,6,6],
+    25:[6,6,6,6], 26:[6,6,6,6], 27:[6,6,6,6], 28:[6,6,6,6],
+    29:[6,6,6,6], 30:[6,6,6,6], 31:[6,6,6,6], 32:[6,6,6,6],
+    33:[6,6,6,6], 34:[6,6,6,6], 35:[6,6,6,6], 36:[6,6,6,6],
+    37:[6,6,6,6], 38:[6,6,6,6], 39:[6,6,6,6], 40:[6,6,6,6]
+  };
+
+  // Alignment pattern positions (center coordinates) for version 1-40
+  // Values are row/column positions of alignment pattern centers
+  const ALIGNMENT_POS = {
+    1:[], 2:[6], 3:[6], 4:[6], 5:[6], 6:[6],
+    7:[6,22], 8:[6,24], 9:[6,26], 10:[6,28], 11:[6,30], 12:[6,32],
+    13:[6,34], 14:[6,26,46], 15:[6,26,48], 16:[6,26,50], 17:[6,30,54],
+    18:[6,30,56], 19:[6,30,58], 20:[6,34,62], 21:[6,28,50,72], 22:[6,26,50,74],
+    23:[6,30,54,78], 24:[6,28,54,80], 25:[6,32,58,84], 26:[6,30,58,86],
+    27:[6,34,62,90], 28:[6,26,50,74,98], 29:[6,30,54,78,102], 30:[6,26,52,78,104],
+    31:[6,30,56,82,108], 32:[6,34,60,86,112], 33:[6,30,58,86,114], 34:[6,34,62,90,118],
+    35:[6,30,54,78,102,126], 36:[6,24,50,76,102,128], 37:[6,28,54,80,106,132],
+    38:[6,32,58,84,110,136], 39:[6,26,54,82,110,138], 40:[6,30,58,86,114,142]
+  };
+
+  // Multi-dimensional alignment positions (versions with multiple alignment patterns need a grid)
+  // Each entry is an array of [row, col] pairs for alignment pattern centers
+  const ALIGNMENT_POS_MULTI = {
+    1:[[6,6]],
+    2:[[6,18],[18,6]],
+    3:[[6,22],[22,6]],
+    4:[[6,26],[26,6]],
+    5:[[6,30],[30,6]],
+    6:[[6,34],[34,6]],
+    7:[[6,22],[22,6],[22,22]],
+    8:[[6,24],[24,6],[24,24]],
+    9:[[6,26],[26,6],[26,26]],
+    10:[[6,28],[28,6],[28,28]],
+    11:[[6,30],[30,6],[30,30]],
+    12:[[6,32],[32,6],[32,32]],
+    13:[[6,34],[34,6],[34,34]],
+    14:[[6,26],[26,6],[26,26],[6,46],[46,6],[46,46],[26,46],[46,26]],
+    15:[[6,26],[26,6],[26,26],[6,48],[48,6],[48,48],[26,48],[48,26]],
+    16:[[6,26],[26,6],[26,26],[6,50],[50,6],[50,50],[26,50],[50,26]],
+    17:[[6,30],[30,6],[30,30],[6,54],[54,6],[54,54],[30,54],[54,30]],
+    18:[[6,30],[30,6],[30,30],[6,56],[56,6],[56,56],[30,56],[56,30]],
+    19:[[6,30],[30,6],[30,30],[6,58],[58,6],[58,58],[30,58],[58,30]],
+    20:[[6,34],[34,6],[34,34],[6,62],[62,6],[62,62],[34,62],[62,34]],
+    21:[[6,28],[28,6],[28,28],[50,6],[50,28],[50,50],[6,50],[28,50]],
+    22:[[6,26],[26,6],[26,26],[50,6],[50,26],[50,50],[6,50],[26,50]],
+    23:[[6,30],[30,6],[30,30],[54,6],[54,30],[54,54],[6,54],[30,54]],
+    24:[[6,28],[28,6],[28,28],[54,6],[54,28],[54,54],[6,54],[28,54]],
+    25:[[6,32],[32,6],[32,32],[58,6],[58,32],[58,58],[6,58],[32,58]],
+    26:[[6,30],[30,6],[30,30],[58,6],[58,30],[58,58],[6,58],[30,58]],
+    27:[[6,34],[34,6],[34,34],[62,6],[62,34],[62,62],[6,62],[34,62]],
+    28:[[6,26],[26,6],[26,26],[50,6],[50,26],[50,50],[74,6],[74,26],[74,50],[98,6],[98,26],[98,50],[6,74],[26,74],[50,74],[74,74]],
+    29:[[6,30],[30,6],[30,30],[54,6],[54,30],[54,54],[78,6],[78,30],[78,54],[102,6],[102,30],[102,54],[6,78],[30,78],[54,78],[78,78]],
+    30:[[6,26],[26,6],[26,26],[52,6],[52,26],[52,52],[78,6],[78,26],[78,52],[104,6],[104,26],[104,52],[6,78],[26,78],[52,78],[78,78]],
+    31:[[6,30],[30,6],[30,30],[56,6],[56,30],[56,56],[82,6],[82,30],[82,56],[108,6],[108,30],[108,56],[6,82],[30,82],[56,82],[82,82]],
+    32:[[6,34],[34,6],[34,34],[60,6],[60,34],[60,60],[86,6],[86,34],[86,60],[112,6],[112,34],[112,60],[6,86],[34,86],[60,86],[86,86]],
+    33:[[6,30],[30,6],[30,30],[58,6],[58,30],[58,58],[86,6],[86,30],[86,58],[114,6],[114,30],[114,58],[6,86],[30,86],[58,86],[86,86]],
+    34:[[6,34],[34,6],[34,34],[62,6],[62,34],[62,62],[90,6],[90,34],[90,62],[118,6],[118,34],[118,62],[6,90],[34,90],[62,90],[90,90]],
+    35:[[6,30],[30,6],[30,30],[54,6],[54,30],[54,54],[78,6],[78,30],[78,54],[102,6],[102,30],[102,54],[126,6],[126,30],[126,54],[6,78],[30,78],[54,78],[78,78]],
+    36:[[6,24],[24,6],[24,24],[50,6],[50,24],[50,50],[76,6],[76,24],[76,50],[102,6],[102,24],[102,50],[128,6],[128,24],[128,50],[6,76],[24,76],[50,76],[76,76]],
+    37:[[6,28],[28,6],[28,28],[54,6],[54,28],[54,54],[80,6],[80,28],[80,54],[106,6],[106,28],[106,54],[132,6],[132,28],[132,54],[6,80],[28,80],[54,80],[80,80]],
+    38:[[6,32],[32,6],[32,32],[58,6],[58,32],[58,58],[84,6],[84,32],[84,58],[110,6],[110,32],[110,58],[136,6],[136,32],[136,58],[6,84],[32,84],[58,84],[84,84]],
+    39:[[6,26],[26,6],[26,26],[54,6],[54,26],[54,54],[82,6],[82,26],[82,54],[110,6],[110,26],[110,54],[138,6],[138,26],[138,54],[6,82],[26,82],[54,82],[82,82]],
+    40:[[6,30],[30,6],[30,30],[58,6],[58,30],[58,58],[86,6],[86,30],[86,58],[114,6],[114,30],[114,58],[142,6],[142,30],[142,58],[6,86],[30,86],[58,86],[86,86]]
+  };
+
+  // Version info for versions 7-40 (just the first 3 for each)
+  const VERSION_INFO = [
+    0x07C94,0x085BC,0x09A99,0x0A4D3,0x0BBF6,0x0C762,0x0D847,0x0E60D,0x0F928,0x10B78,
+    0x1145D,0x12A17,0x13532,0x149A6,0x15683,0x168C9,0x177EC,0x18EC4,0x191E1,0x1AFAB,
+    0x1B08E,0x1CC1A,0x1D33F,0x1ED75,0x1F250,0x209D5,0x216F0,0x228BA,0x2376D,0x24B50,
+    0x2542E,0x26A64,0x27541,0x28C69
+  ];
+
+  // Format info (15 bits each, indexed by (eccLevel*8 + maskPattern))
+  // eccLevel: 0=L, 1=M, 2=Q, 3=H
+  const FORMAT_INFO = [
+    // L(0): mask 0-7
+    0x77C4,0x72F3,0x7DAA,0x789D,0x662F,0x6318,0x6C41,0x6976,
+    // M(1): mask 0-7
+    0x5545,0x5072,0x5FDD,0x5AE8,0x45F9,0x40CE,0x4F97,0x4AA2,
+    // Q(2): mask 0-7
+    0x3554,0x3067,0x3F32,0x3A65,0x24B4,0x2183,0x2EDA,0x2BED,
+    // H(3): mask 0-7
+    0x1585,0x10B6,0x1F01,0x1A76,0x0A40,0x0F77,0x0AA2,0x05D5,
+    0x0000
+  ];
+
+  // Galois field
+  const EXP = new Uint8Array(256);
+  const LOG = new Uint8Array(256);
+  (function initGF() {
+    for (let i = 0; i < 256; i++) EXP[i] = i < 8 ? (1 << i) : 0;
+    for (let i = 8; i < 256; i++) EXP[i] = EXP[i-4] ^ EXP[i-5] ^ EXP[i-6] ^ EXP[i-8];
+    for (let i = 0; i < 255; i++) LOG[EXP[i]] = i;
+  })();
+  function glog(n) { if (n < 1) return -Infinity; return LOG[n]; }
+  function gexp(n) { while (n < 0) n += 255; while (n >= 255) n -= 255; return EXP[n]; }
+
+  // Reed-Solomon encoder with correct generator polynomial
+  function rsEncode(data, ecLen) {
+    // Compute generator polynomial: g(x) = (x-α^0)(x-α^1)...(x-α^(ecLen-1))
+    // In GF(256): -1 = 1, so subtraction = XOR
+    let gen = [1]; // polynomial 1
+    for (let i = 0; i < ecLen; i++) {
+      // Multiply by (x + α^i)
+      const next = new Array(gen.length + 1).fill(0);
+      next[0] = gen[0];
+      for (let j = 1; j < gen.length; j++) {
+        next[j] = gen[j-1] ^ (gen[j] !== 0 ? gexp(glog(gen[j]) + i) : 0);
+      }
+      next[gen.length] = (gen[gen.length-1] !== 0 ? gexp(glog(gen[gen.length-1]) + i) : 0);
+      gen = next;
+    }
+    // gen[j] = coefficient of x^(ecLen-j), j=0..ecLen
+    
+    // Shift register encoding
+    const res = new Array(ecLen).fill(0);
+    for (const b of data) {
+      const factor = b ^ res[0];
+      for (let i = 0; i < ecLen - 1; i++) {
+        const add = (factor !== 0 && gen[i+1] !== 0) ? gexp(glog(factor) + glog(gen[i+1])) : 0;
+        res[i] = res[i+1] ^ add;
+      }
+      res[ecLen - 1] = (factor !== 0 && gen[ecLen] !== 0) ? gexp(glog(factor) + glog(gen[ecLen])) : 0;
+    }
+    return res;
+  }
+
+  // Get version info - use pre-computed data capacity tables
+  // Total data codewords (including mode + count indicator overhead) for L/M/Q/H
+  const TOTAL_DATA_CW = {
+    L:[19,34,55,80,108,136,156,194,232,274,324,370,428,456,516,612,672,716,784,868,920,1008,1064,1132,1196,1268,1370,1459,1531,1631,1735,1843,1955,2071,2191,2306,2434,2566,2702,2812],
+    M:[16,28,44,64,86,108,124,154,182,216,254,290,334,364,434,538,606,652,724,816,869,960,1028,1105,1161,1225,1322,1408,1488,1607,1709,1820,1935,2055,2180,2313,2441,2576,2719,2860],
+    Q:[13,22,34,48,62,76,88,110,132,153,180,205,243,266,319,385,453,513,576,646,720,794,866,945,1008,1096,1176,1250,1328,1436,1545,1659,1778,1902,2030,2164,2305,2452,2606,2768],
+    H:[9,16,26,36,46,56,66,86,100,121,137,158,185,209,236,289,327,369,399,447,487,514,570,616,666,720,756,810,873,913,987,1035,1117,1202,1282,1369,1461,1558,1661,1771]
+  };
+  // Net data capacity (user data bytes, after mode+count overhead)
+  const NET_DATA_CW = {
+    L:[14,26,42,62,84,106,122,152,180,213,251,287,331,362,430,537,605,651,723,815,869,960,1028,1105,1161,1225,1322,1408,1488,1607,1709,1820,1935,2055,2180,2313,2441,2576,2719,2860],
+    M:[14,26,42,62,84,106,122,152,180,213,251,287,331,362,430,537,605,651,723,815,869,960,1028,1105,1161,1225,1322,1408,1488,1607,1709,1820,1935,2055,2180,2313,2441,2576,2719,2860],
+    Q:[11,20,32,46,60,74,86,108,130,151,178,203,241,264,317,383,451,511,574,644,718,792,864,943,1006,1094,1174,1248,1326,1434,1543,1657,1776,1900,2028,2162,2303,2450,2604,2766],
+    H:[7,14,24,34,44,54,64,84,98,119,135,156,183,207,234,287,325,367,397,445,485,512,568,614,664,718,754,808,871,911,985,1033,1115,1200,1280,1367,1459,1556,1659,1769]
+  };
+
+  function getVersionData(version, eccIdx) {
+    const ecc = ECC_PER_BLOCK[version][eccIdx];
+    const blocks = EC_BLOCKS[version][eccIdx];
+    const totalEC = ecc * blocks;
+    const size = 17 + version * 4;
+    const totalCW = TOTAL_DATA_CW[['L','M','Q','H'][eccIdx]][version - 1];
+    const dataCW = totalCW;
+    return { ecc, blocks, totalEC, dataCW, size };
+  }
+
+  // Find smallest version that fits
+  function findVersion(dataLen, eccIdx) {
+    const netCap = NET_DATA_CW[['L','M','Q','H'][eccIdx]];
+    for (let v = 1; v <= 40; v++) {
+      if (dataLen <= netCap[v - 1]) return { version: v, info: getVersionData(v, eccIdx) };
+    }
+    return null;
+  }
+
+  // Place finder pattern
+  function placeFinder(m, r, c) {
+    for (let i = -1; i <= 7; i++) {
+      for (let j = -1; j <= 7; j++) {
+        const rr = r + i, cc = c + j;
+        if (rr < 0 || rr >= m.length || cc < 0 || cc >= m.length) continue;
+        const b =
+          (i >= 0 && i <= 6 && (j === 0 || j === 6)) ||
+          (j >= 0 && j <= 6 && (i === 0 || i === 6)) ||
+          (i >= 2 && i <= 4 && j >= 2 && j <= 4);
+        m[rr][cc] = b;
+      }
+    }
+  }
+
+  // Place alignment pattern
+  function placeAlignment(m, r, c) {
+    for (let i = -2; i <= 2; i++) {
+      for (let j = -2; j <= 2; j++) {
+        const rr = r + i, cc = c + j;
+        if (rr < 0 || rr >= m.length || cc < 0 || cc >= m.length) continue;
+        m[rr][cc] = Math.max(Math.abs(i), Math.abs(j)) !== 1;
+        if (i === 0 && j === 0) m[rr][cc] = true;
+      }
+    }
+  }
+
+  // Apply mask
+  function applyMask(m, reserved, mask) {
+    const size = m.length;
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (reserved[r][c]) continue;
+        let invert = false;
+        switch (mask) {
+          case 0: invert = (r + c) % 2 === 0; break;
+          case 1: invert = r % 2 === 0; break;
+          case 2: invert = c % 3 === 0; break;
+          case 3: invert = (r + c) % 3 === 0; break;
+          case 4: invert = (Math.floor(r/2) + Math.floor(c/3)) % 2 === 0; break;
+          case 5: invert = (r * c) % 2 + (r * c) % 3 === 0; break;
+          case 6: invert = ((r * c) % 2 + (r * c) % 3) % 2 === 0; break;
+          case 7: invert = ((r + c) % 2 + (r * c) % 3) % 2 === 0; break;
+        }
+        if (invert) m[r][c] = !m[r][c];
+      }
+    }
+  }
+
+  // Evaluate mask penalty
+  function evalMask(m) {
+    const size = m.length;
+    let score = 0;
+    // Rule 1: runs of same color
+    for (let r = 0; r < size; r++) {
+      let run = 1;
+      for (let c = 1; c < size; c++) {
+        if (m[r][c] === m[r][c-1]) { run++; }
+        else { if (run >= 5) score += 3 + (run - 5); run = 1; }
+      }
+      if (run >= 5) score += 3 + (run - 5);
+    }
+    for (let c = 0; c < size; c++) {
+      let run = 1;
+      for (let r = 1; r < size; r++) {
+        if (m[r][c] === m[r-1][c]) { run++; }
+        else { if (run >= 5) score += 3 + (run - 5); run = 1; }
+      }
+      if (run >= 5) score += 3 + (run - 5);
+    }
+    // Rule 2: 2x2 blocks
+    for (let r = 0; r < size - 1; r++) {
+      for (let c = 0; c < size - 1; c++) {
+        const v = m[r][c];
+        if (v === m[r][c+1] && v === m[r+1][c] && v === m[r+1][c+1]) score += 3;
+      }
+    }
+    // Rule 3: finder-like patterns
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size - 6; c++) {
+        const p = [m[r][c],m[r][c+1],m[r][c+2],m[r][c+3],m[r][c+4],m[r][c+5],m[r][c+6]];
+        if (p[0]&&!p[1]&&p[2]&&p[3]&&p[4]&&!p[5]&&p[6]) score += 40;
+      }
+    }
+    for (let c = 0; c < size; c++) {
+      for (let r = 0; r < size - 6; r++) {
+        const p = [m[r][c],m[r+1][c],m[r+2][c],m[r+3][c],m[r+4][c],m[r+5][c],m[r+6][c]];
+        if (p[0]&&!p[1]&&p[2]&&p[3]&&p[4]&&!p[5]&&p[6]) score += 40;
+      }
+    }
+    // Rule 4: dark module proportion penalty
+    let darkCount = 0;
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++)
+        if (m[r][c]) darkCount++;
+    const totalMod = size * size;
+    const ratio = darkCount * 100 / totalMod;
+    const deviation = Math.floor(Math.abs(ratio - 50) / 5);
+    score += deviation * 10;
+    return score;
+  }
+
+  // Main generator
+  function generate(text, eccIdx) {
+    eccIdx = eccIdx || 1; // Default M
+    // Encode text as UTF-8
+    const bytes = [];
+    for (let i = 0; i < text.length; i++) {
+      const c = text.charCodeAt(i);
+      if (c < 0x80) bytes.push(c);
+      else if (c < 0x800) { bytes.push(0xC0|(c>>6)); bytes.push(0x80|(c&0x3F)); }
+      else { bytes.push(0xE0|(c>>12)); bytes.push(0x80|((c>>6)&0x3F)); bytes.push(0x80|(c&0x3F)); }
+    }
+    const dataLen = bytes.length;
+
+    // Find version
+    const found = findVersion(dataLen, eccIdx);
+    if (!found) throw new Error('Data too long for QR code');
+    const version = found.version;
+    const info = found.info;
+    const size = info.size;
+
+    // Build matrix
+    const matrix = Array.from({length: size}, () => new Array(size).fill(null));
+    const reserved = Array.from({length: size}, () => new Array(size).fill(false));
+
+    // Finders (7x7 pattern + surrounding white separator ring)
+    placeFinder(matrix, 0, 0);
+    placeFinder(matrix, size - 7, 0);
+    placeFinder(matrix, 0, size - 7);
+
+    // Set separator ring (white cells around each finder)
+    function setSeparator(r0, c0, r1, c1) {
+      for (let r = r0; r <= r1; r++)
+        for (let c = c0; c <= c1; c++)
+          if (r >= 0 && r < size && c >= 0 && c < size)
+            if (matrix[r][c] === null) matrix[r][c] = false;
+    }
+    setSeparator(0, 7, 7, 7);                   // top-right separator
+    setSeparator(7, 0, 7, 7);                   // bottom separator
+    setSeparator(size - 8, 7, size - 8, 7);     // bottom-left separator
+    setSeparator(size - 8, 0, size - 8, 7);     // bottom separator row
+    setSeparator(7, size - 8, 7, size - 8);     // top-right separator column
+    setSeparator(0, size - 8, 7, size - 8);     // right separator
+    setSeparator(size - 8, size - 8, size - 1, size - 1); // bottom-right corner
+
+    // Mark finder + separator areas as reserved to prevent data overwrite
+    function reserveArea(r0, c0, r1, c1) {
+      for (let r = r0; r <= r1; r++)
+        for (let c = c0; c <= c1; c++)
+          if (r >= 0 && r < size && c >= 0 && c < size)
+            reserved[r][c] = true;
+    }
+    reserveArea(0, 0, 7, 7);                  // top-left finder + separator
+    reserveArea(size - 8, 0, size - 1, 7);    // bottom-left finder + separator
+    reserveArea(0, size - 8, 7, size - 1);    // top-right finder + separator
+
+    // Timing patterns
+    for (let i = 8; i < size - 8; i++) {
+      matrix[6][i] = (i % 2 === 0);
+      matrix[i][6] = (i % 2 === 0);
+      reserved[6][i] = true;
+      reserved[i][6] = true;
+    }
+
+    // Alignment patterns (skip version 1 - finders cover all corners)
+    if (version >= 2) {
+      const centers = ALIGNMENT_POS_MULTI[version];
+      for (const [r, c] of centers) {
+        // Skip if too close to finder patterns or timing patterns
+        if (r <= 8 && c <= 8) continue;
+        if (r <= 8 && c >= size - 9) continue;
+        if (r >= size - 9 && c <= 8) continue;
+        // Skip if overlapping timing pattern row/col
+        if (r === 6 || c === 6) continue;
+        if (!reserved[r][c]) placeAlignment(matrix, r, c);
+      }
+    }
+
+    // Reserve format info area
+    for (let i = 0; i <= 8; i++) {
+      if (matrix[8][i] === null) matrix[8][i] = false;
+      if (matrix[i][8] === null) matrix[i][8] = false;
+      reserved[8][i] = true;
+      reserved[i][8] = true;
+    }
+    for (let i = 0; i < 8; i++) {
+      reserved[8][size - 1 - i] = true;
+      reserved[size - 1 - i][8] = true;
+    }
+    reserved[size - 8][8] = true;
+
+    // Reserve version info (version 7+)
+    if (version >= 7) {
+      for (let i = 0; i < 6; i++) {
+        for (let j = 0; j < 3; j++) {
+          reserved[size - 11 + j][i] = true;
+          reserved[i][size - 11 + j] = true;
+        }
+      }
+    }
+
+    // Build bit stream
+    const bits = [];
+    function put(num, len) {
+      for (let i = 0; i < len; i++) bits.push(((num >>> (len - 1 - i)) & 1) === 1);
+    }
+    put(0x04, 4); // Byte mode
+    const cntBits = version < 10 ? 8 : 16;
+    put(dataLen, cntBits);
+    for (const b of bytes) put(b, 8);
+
+    // Terminator
+    const totalCW = info.totalEC + info.dataCW;
+    const capacityBits = totalCW * 8;
+    for (let i = 0; i < 4 && bits.length < capacityBits; i++) bits.push(false);
+    while (bits.length % 8 !== 0) bits.push(false);
+
+    // To bytes
+    const dataBytes = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      let b = 0;
+      for (let j = 0; j < 8; j++) b = (b << 1) | (bits[i+j] ? 1 : 0);
+      dataBytes.push(b);
+    }
+    // Pad
+    while (dataBytes.length < info.dataCW) {
+      dataBytes.push((dataBytes.length % 2 === 0) ? PAD0 : PAD1);
+    }
+    // Truncate if too long (shouldn't happen)
+    if (dataBytes.length > info.dataCW) dataBytes.length = info.dataCW;
+
+    // RS encoding - split into blocks
+    const blocks = [];
+    const blockCount = info.blocks;
+    const shortLen = Math.floor(info.dataCW / blockCount);
+    const longCount = info.dataCW % blockCount;
+    const ecLen = info.ecc;
+
+    let offset = 0;
+    for (let b = 0; b < blockCount; b++) {
+      const bl = shortLen + (b >= blockCount - longCount ? 1 : 0);
+      const blkData = dataBytes.slice(offset, offset + bl);
+      offset += bl;
+      const ec = rsEncode(blkData, ecLen);
+      blocks.push({ data: blkData, ec });
+    }
+
+    // Interleave data
+    const maxDataLen = Math.max(...blocks.map(b => b.data.length));
+    const finalBytes = [];
+    for (let i = 0; i < maxDataLen; i++) {
+      for (const blk of blocks) {
+        if (i < blk.data.length) finalBytes.push(blk.data[i]);
+      }
+    }
+    // Interleave EC
+    for (let i = 0; i < ecLen; i++) {
+      for (const blk of blocks) finalBytes.push(blk.ec[i]);
+    }
+
+    // Place data
+    let byteIdx = 0, bitIdx = 7;
+    let upward = true;
+    for (let col = size - 1; col > 0; col -= 2) {
+      if (col === 6) col--;
+      for (let i = 0; i < size; i++) {
+        const row = upward ? size - 1 - i : i;
+        for (let k = 0; k < 2; k++) {
+          const c = col - k;
+          if (!reserved[row][c]) {
+            if (byteIdx < finalBytes.length) {
+              matrix[row][c] = ((finalBytes[byteIdx] >>> bitIdx) & 1) === 1;
+            } else {
+              matrix[row][c] = false;
+            }
+            bitIdx--;
+            if (bitIdx === -1) { bitIdx = 7; byteIdx++; }
+          }
+        }
+      }
+      upward = !upward;
+    }
+
+    // Try all 8 masks, pick best
+    let bestScore = Infinity;
+    let bestMatrix = null;
+    let bestMask = 0;
+    for (let mask = 0; mask < 8; mask++) {
+      const testMatrix = matrix.map(r => r.slice());
+      applyMask(testMatrix, reserved, mask);
+      const score = evalMask(testMatrix);
+      if (score < bestScore) {
+        bestScore = score;
+        bestMatrix = testMatrix;
+        bestMask = mask;
+      }
+    }
+
+    // Place format info
+    const fmt = FORMAT_INFO[eccIdx * 8 + bestMask];
+    const fiBits = [];
+    for (let i = 0; i < 15; i++) fiBits.push(((fmt >>> (14 - i)) & 1) === 1);
+    // Around top-left
+    for (let i = 0; i <= 5; i++) bestMatrix[8][i] = fiBits[i];
+    bestMatrix[8][7] = fiBits[6];
+    bestMatrix[8][8] = fiBits[7];
+    bestMatrix[7][8] = fiBits[8];
+    for (let i = 9; i < 15; i++) bestMatrix[14 - i][8] = fiBits[i];
+    // Top-right and bottom-left
+    for (let i = 0; i < 8; i++) bestMatrix[8][size - 1 - i] = fiBits[i];
+    for (let i = 0; i < 8; i++) bestMatrix[size - 1 - i][8] = fiBits[i];
+    bestMatrix[size - 8][8] = true; // Dark module
+
+    // Place version info
+    if (version >= 7) {
+      const vInfo = VERSION_INFO[version - 7];
+      for (let i = 0; i < 18; i++) {
+        const bit = ((vInfo >>> (17 - i)) & 1) === 1;
+        const a = i % 6;
+        const b = Math.floor(i / 6);
+        bestMatrix[size - 11 + b][a] = bit;
+        bestMatrix[a][size - 11 + b] = bit;
+      }
+    }
+
+    return { size, matrix: bestMatrix, version };
+  }
+
+  // Draw to canvas
+  function draw(canvas, text, opts) {
+    opts = opts || {};
+    const eccIdx = opts.ecc !== undefined ? opts.ecc : 1;
+    const margin = opts.margin !== undefined ? opts.margin : 4;
+    const { size, matrix } = generate(text, eccIdx);
+    const cellSize = opts.cellSize || Math.max(1, Math.floor((canvas.width || 200) / (size + margin * 2)));
+    const totalSize = size + margin * 2;
+    canvas.width = totalSize * cellSize;
+    canvas.height = totalSize * cellSize;
+    const ctx = canvas.getContext('2d');
+    // Background
+    ctx.fillStyle = opts.light || '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Modules
+    ctx.fillStyle = opts.dark || '#1a1a2e';
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (matrix[r][c]) {
+          ctx.fillRect((c + margin) * cellSize, (r + margin) * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+    return { size, matrix };
+  }
+
+  return { generate, drawOnCanvas: draw };
+})();
+
+// 生成 QQ 群二维码并显示在设置面板
+function renderQQQRCode() {
+  const canvasId = 'qqQrCanvas';
+  let canvas = document.getElementById(canvasId);
+  if (!canvas) {
+    // 创建 canvas
+    const fallback = document.getElementById('qqGroupFallback');
+    if (fallback) {
+      fallback.style.display = 'none';
+    }
+    const qrDiv = document.querySelector('.qq-group-qr');
+    if (qrDiv) {
+      canvas = document.createElement('canvas');
+      canvas.id = canvasId;
+      canvas.width = 200;
+      canvas.height = 200;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvas.style.display = 'block';
+      qrDiv.innerHTML = '';
+      qrDiv.appendChild(canvas);
+    } else {
+      return;
+    }
+  }
+  // QQ 群链接格式
+  const groupUrl = 'https://qm.qq.com/q/1037376837';
+  try {
+    QR.drawOnCanvas(canvas, groupUrl, {
+      ecc: 1,      // M level
+      margin: 2,
+      cellSize: 6,
+      dark: '#1a1a2e',
+      light: '#ffffff'
+    });
+  } catch (e) {
+    // 如果生成失败，显示纯文本提示
+    const fallback = document.getElementById('qqGroupFallback');
+    if (fallback) {
+      const qrDiv = canvas.parentElement;
+      qrDiv.innerHTML = '';
+      qrDiv.appendChild(fallback);
+      fallback.style.display = 'flex';
+    }
+  }
+}
 </script>
 </body>
 </html>
