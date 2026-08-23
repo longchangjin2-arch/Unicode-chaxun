@@ -3613,6 +3613,10 @@ let unicodeData = {
   loaded: false,
 };
 
+// --- 外置字体管理 ---
+let customFonts = [];  // [{name, type, size, addedAt}]
+const ORIGINAL_FONT = document.body.style.fontFamily || getComputedStyle(document.body).fontFamily;
+
 // --- IndexedDB 简易封装 ---
 function idbOpen() {
   return new Promise((resolve, reject) => {
@@ -3669,6 +3673,102 @@ async function loadStoredUnicodeData() {
     };
   }
   updateVersionDisplay();
+}
+
+// --- 外置字体管理 ---
+async function loadCustomFonts() {
+  const list = await idbGet('customFonts');
+  if (!list || !list.length) return;
+  customFonts = list;
+  let styleEl = document.getElementById('customFontFaces');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'customFontFaces';
+    document.head.appendChild(styleEl);
+  }
+  let css = '';
+  for (const f of customFonts) {
+    const data = await idbGet('fontData_' + f.name);
+    if (!data) continue;
+    const blob = new Blob([data], { type: f.type });
+    const url = URL.createObjectURL(blob);
+    css += `@font-face { font-family: 'CustomFont_${f.name}'; src: url('${url}'); }\n`;
+  }
+  styleEl.textContent = css;
+  applyFontFamily();
+}
+
+function applyFontFamily() {
+  if (customFonts.length) {
+    const custom = customFonts.map(f => `'CustomFont_${f.name}'`).join(', ');
+    document.body.style.fontFamily = custom + ', ' + ORIGINAL_FONT;
+  } else {
+    document.body.style.fontFamily = ORIGINAL_FONT;
+  }
+}
+
+async function installFont(file) {
+  const validTypes = ['font/ttf', 'font/woff', 'font/woff2', 'application/font-sfnt', 'application/font-woff'];
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!validTypes.includes(file.type) && !['ttf','woff','woff2'].includes(ext)) {
+    showToast('⚠ 不支持的字体格式，请上传 TTF/WOFF/WOFF2 文件');
+    return;
+  }
+  const name = file.name.replace(/\.(ttf|woff2?|otf)$/i, '');
+  if (customFonts.some(f => f.name === name)) {
+    showToast('⚠ 该字体已安装');
+    return;
+  }
+  const type = file.type || (ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : 'font/ttf');
+  const buf = await file.arrayBuffer();
+  await idbSet('fontData_' + name, buf);
+  const info = { name, type, size: file.size, addedAt: Date.now() };
+  customFonts.push(info);
+  await idbSet('customFonts', customFonts);
+  // 创建 @font-face
+  let styleEl = document.getElementById('customFontFaces');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'customFontFaces';
+    document.head.appendChild(styleEl);
+  }
+  const blob = new Blob([buf], { type });
+  const url = URL.createObjectURL(blob);
+  styleEl.textContent += `@font-face { font-family: 'CustomFont_${name}'; src: url('${url}'); }\n`;
+  applyFontFamily();
+  showToast(`✅ 字体「${name}」已安装`);
+  addLog('安装字体', name);
+  refreshSettingsDisplay();
+}
+
+async function removeFont(name) {
+  if (!confirm(`确定卸载字体「${name}」？`)) return;
+  await idbDel('fontData_' + name);
+  customFonts = customFonts.filter(f => f.name !== name);
+  await idbSet('customFonts', customFonts);
+  // 重建 @font-face
+  const styleEl = document.getElementById('customFontFaces');
+  if (styleEl) {
+    let css = '';
+    for (const f of customFonts) {
+      const data = await idbGet('fontData_' + f.name);
+      if (!data) continue;
+      const blob = new Blob([data], { type: f.type });
+      const url = URL.createObjectURL(blob);
+      css += `@font-face { font-family: 'CustomFont_${f.name}'; src: url('${url}'); }\n`;
+    }
+    styleEl.textContent = css;
+  }
+  applyFontFamily();
+  showToast(`已卸载字体「${name}」`);
+  addLog('卸载字体', name);
+  refreshSettingsDisplay();
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(2) + ' MB';
 }
 
 // --- 上传 UnicodeData.txt ---
@@ -5561,7 +5661,8 @@ function renderFavoritesFlat(favs) {
 }
 
 function renderFavorites() {
-  const favs = [...favorites].sort((a,b)=>a-b);
+  // 平铺模式按收藏时间顺序（Set 插入顺序），分组模式按码点排序
+  const favs = favViewMode === 'flat' ? [...favorites] : [...favorites].sort((a,b)=>a-b);
   const el = document.getElementById('content');
   document.getElementById('pagination').innerHTML = '';
 
@@ -7252,6 +7353,33 @@ function renderSettingsBody() {
     </div>
 
     <div class="settings-section">
+      <h3>🔤 外置字体</h3>
+      <p>安装自定义字体（TTF/WOFF/WOFF2），用于字符显示。安装后全局生效，字体数据存储在浏览器 IndexedDB 中。</p>
+      <div class="settings-actions" style="margin-top:8px">
+        <label class="file-upload-btn">
+          📄 安装字体文件
+          <input type="file" accept=".ttf,.woff,.woff2,font/ttf,font/woff,font/woff2" onchange="installFont(this.files[0]);this.value='';" style="display:none">
+        </label>
+      </div>
+      <div id="fontList" style="margin-top:12px">
+        ${customFonts.length === 0
+          ? '<p style="color:var(--muted);font-size:13px">尚未安装任何外置字体</p>'
+          : customFonts.map(f => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+              <span style="font-size:18px">🔤</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:14px">${escapeHtml(f.name)}</div>
+                <div style="font-size:11px;color:var(--muted)">${f.type.split('/').pop().toUpperCase()} · ${formatSize(f.size)} · 安装于 ${new Date(f.addedAt).toLocaleDateString()}</div>
+              </div>
+              <span style="font-family:'CustomFont_${f.name}';font-size:20px;min-width:36px;text-align:center">永字 Aa</span>
+              <button class="settings-reset-btn" style="padding:4px 10px;font-size:12px" onclick="removeFont('${f.name.replace(/'/g, "\\'")}')">卸载</button>
+            </div>
+          `).join('')
+        }
+      </div>
+    </div>
+
+    <div class="settings-section">
       <h3>👥 Unicode 讨论群聊</h3>
       <p>欢迎加入 Unicode 爱好者 QQ 群，一起交流学习！</p>
       <div class="qq-group-card" style="margin-top:12px">
@@ -7524,6 +7652,8 @@ document.addEventListener('keydown', (e) => {
 loadStoredUnicodeData().then(() => {
   // 数据加载完成后无需重新渲染，所有查询函数会动态检查 unicodeData
 });
+// 异步加载已安装的外置字体
+loadCustomFonts();
 
 // ============================================================
 // 纯 JS QR 码生成器（内嵌版，不依赖外部文件）
