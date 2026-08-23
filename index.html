@@ -201,6 +201,12 @@ body {
 body.dark .tool-page .tp-btn.sec { background: #2d3a5c; color: #e0e0e0; }
 body.dark .tool-page .tp-btn.sec:hover { background: #3d4a6c; }
 
+/* 批量解析：正/反向模式切换器 */
+.batch-mode-switch { display:inline-flex; border:2px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:12px; }
+.batch-mode-switch button { padding:7px 16px; border:none; background:transparent; color:var(--muted); font-size:13px; cursor:pointer; transition:background .15s,color .15s; }
+.batch-mode-switch button.active { background:var(--accent); color:#fff; font-weight:600; }
+.batch-mode-switch button:not(.active):hover { background:var(--bg); }
+
 /* 对比结果 */
 .compare-result {
   margin-top: 16px;
@@ -285,6 +291,36 @@ body.dark .surrogate-tag { background: #4527a0; color: #ede7f6; }
   font-size: 13px; transition: background .2s;
 }
 .batch-export-btn:hover { background: var(--accent-hover); }
+.sep-btns {
+  display: flex; gap: 3px; align-items: center;
+}
+.sep-btn {
+  padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--card); color: var(--text); font-size: 12px;
+  cursor: pointer; transition: all .15s; font-family: Consolas, monospace;
+  line-height: 1.2;
+}
+.sep-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sep-btn.on {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
+.batch-sep-input {
+  width: 80px; border: 1px solid var(--border); border-radius: 5px;
+  padding: 4px 8px; font-size: 13px; background: var(--card);
+  color: var(--text); font-family: Consolas, monospace;
+}
+.batch-sep-input:focus { border-color: var(--accent); outline: none; }
+.batch-joined-result {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; margin-bottom: 10px; font-size: 14px;
+  line-height: 1.6; word-break: break-all; position: relative;
+}
+.batch-joined-result .copy-joined {
+  position: absolute; top: 6px; right: 8px; padding: 2px 8px;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--card);
+  font-size: 11px; cursor: pointer; color: var(--muted);
+}
+.batch-joined-result .copy-joined:hover { border-color: var(--accent); color: var(--accent); }
 .batch-table-wrap {
   border: 1px solid var(--border); border-radius: 8px; overflow: auto;
   max-height: 500px; background: var(--card);
@@ -5677,7 +5713,6 @@ function renderCategoryList() {
 
 function renderCategoryDetail(catName) {
   const el = document.getElementById('content');
-  const scrollRoot = document.getElementById('contentScroll');
   let cps = favCategories[catName] || [];
   cps = cps.filter(cp => favorites.has(cp));
   currentChars = cps;
@@ -5690,65 +5725,9 @@ function renderCategoryDetail(catName) {
     el.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">分类"${catName}"中没有字符<br><br>点击字符详情中的 📁 按钮添加</div>`;
     return;
   }
-  
-  // 使用平铺模式显示
-  if (favFlatState._scrollHandler) { scrollRoot.removeEventListener('scroll', favFlatState._scrollHandler); favFlatState._scrollHandler = null; }
-  favFlatState = { cps: cps, rendered: 0, batchSize: 60, _scrollHandler: null };
-  el.innerHTML = '<div class="grid" id="favFlatGrid"></div><div id="favFlatSentinel" style="text-align:center;padding:20px;color:var(--muted);font-size:13px">向下滚动加载更多…</div>';
-  
-  const grid = document.getElementById('favFlatGrid');
-  const sentinel = document.getElementById('favFlatSentinel');
 
-  let scrollHandler = null;
-  function renderBatch() {
-    const start = favFlatState.rendered;
-    const end = Math.min(start + favFlatState.batchSize, favFlatState.cps.length);
-    if (start >= end) return false;
-    let html = '';
-    for (let i = start; i < end; i++) {
-      html += renderCell(favFlatState.cps[i], i - start);
-    }
-    grid.insertAdjacentHTML('beforeend', html);
-    favFlatState.rendered = end;
-    if (end >= favFlatState.cps.length) {
-      sentinel.textContent = `已显示全部 ${favFlatState.cps.length} 个字符`;
-      if (scrollHandler) { scrollRoot.removeEventListener('scroll', scrollHandler); scrollHandler = null; favFlatState._scrollHandler = null; }
-      return false;
-    }
-    sentinel.textContent = `已加载 ${end} / ${favFlatState.cps.length}，继续向下滚动加载更多…`;
-    return true;
-  }
-  
-  // 初始化：填满首屏
-  renderBatch();
-  while (favFlatState.rendered < favFlatState.cps.length &&
-         scrollRoot.scrollHeight <= scrollRoot.clientHeight + 1) {
-    renderBatch();
-  }
-  
-  // 滚动加载：scroll 事件 + 防抖
-  let scrollTimer = null;
-  scrollHandler = () => {
-    if (favFlatState.rendered >= favFlatState.cps.length) {
-      scrollRoot.removeEventListener('scroll', scrollHandler);
-      scrollHandler = null;
-      favFlatState._scrollHandler = null;
-      return;
-    }
-    if (scrollTimer) return;
-    scrollTimer = setTimeout(() => {
-      scrollTimer = null;
-      const nearBottom = scrollRoot.scrollTop + scrollRoot.clientHeight >= scrollRoot.scrollHeight - 200;
-      if (nearBottom) {
-        while (renderBatch()) {
-          if (scrollRoot.scrollTop + scrollRoot.clientHeight < scrollRoot.scrollHeight - 200) break;
-        }
-      }
-    }, 80);
-  };
-  favFlatState._scrollHandler = scrollHandler;
-  scrollRoot.addEventListener('scroll', scrollHandler);
-  
+  // 复用收藏平铺的虚拟滚动
+  renderFavoritesFlat(cps);
   document.getElementById('contentScroll').scrollTop = 0;
 }
 
@@ -6257,6 +6236,8 @@ function doCompare() {
 // 批量解析页面
 // ============================================================
 let lastBatchData = [];
+let batchMode = 'encode'; // 'encode' 字符→编码  |  'decode' 编码→字符
+let lastBatchSep = ' ';
 
 function showBatch() {
   currentView = 'batch';
@@ -6271,7 +6252,11 @@ function showBatch() {
   el.innerHTML = `
     <div class="tool-page">
       <div class="tp-title">📊 批量字符解析</div>
-      <div class="tp-sub">粘贴或输入任意文本，<b>实时</b>逐字符解析出 Unicode 编码、HTML 实体、CSS 转义、URL 编码等。支持代理对识别，并用 / 隔开批量复制。<b>点击字符单元格可查看详情</b>。</div>
+      <div class="tp-sub" id="batchSub">粘贴或输入任意文本，<b>实时</b>逐字符解析出 Unicode 编码、HTML 实体、CSS 转义、URL 编码等。支持代理对识别，并用 / 隔开批量复制。<b>点击字符单元格可查看详情</b>。</div>
+      <div class="batch-mode-switch" id="batchModeSwitch">
+        <button class="active" onclick="switchBatchMode('encode')">字符 → 编码</button>
+        <button onclick="switchBatchMode('decode')">编码 → 字符</button>
+      </div>
       <textarea id="batchInput" placeholder="请在此粘贴/输入要解析的字符... 例如：Hello,世界! 😀 你好世界。" style="min-height:90px"></textarea>
       <div class="tp-row" style="margin-top:8px;align-items:center;flex-wrap:wrap;gap:8px">
         <span style="font-size:12px;color:var(--muted)" id="batchStatus">等待输入…</span>
@@ -6305,6 +6290,39 @@ function showBatch() {
 
 let batchTimer = null;
 
+function switchBatchMode(mode) {
+  batchMode = mode;
+  clearTimeout(batchTimer); // 取消待处理的实时解析定时器
+  const sw = document.getElementById('batchModeSwitch');
+  if (sw) {
+    sw.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    sw.querySelectorAll('button')[mode === 'encode' ? 0 : 1].classList.add('active');
+  }
+  const sub = document.getElementById('batchSub');
+  const ta = document.getElementById('batchInput');
+  if (mode === 'encode') {
+    if (sub) sub.innerHTML = '粘贴或输入任意文本，<b>实时</b>逐字符解析出 Unicode 编码、HTML 实体、CSS 转义、URL 编码等。支持代理对识别，并用 / 隔开批量复制。<b>点击字符单元格可查看详情</b>。';
+    if (ta) ta.placeholder = '请在此粘贴/输入要解析的字符... 例如：Hello,世界! 😀 你好世界。';
+  } else {
+    if (sub) sub.innerHTML = '粘贴或输入 Unicode 编码，自动<b>反向解析</b>为对应字符。支持格式：<code>U+4E16</code>、<code>\\u4e16</code>、<code>\\u{1F600}</code>、<code>0x4E16</code>、<code>&#19990;</code>、<code>&#x4e16;</code>、<code>&amp;amp;</code>、<code>\\4E16</code>（CSS）、<code>%E4%B8%AD</code>（URL）、纯十进制 <code>19990</code>、纯十六进制 <code>4E16</code>。多个编码用空格/逗号/分号/换行分隔，也支持编码与文本混合。';
+    if (ta) ta.placeholder = '支持多种格式混合输入：\nU+4E16 \\u4e16 0x1F600 &#19990; &#x4e16; \\4E16 %E4%B8%AD &amp; 19990 4e16\n也可直接粘贴含编码的混合文本，工具会自动提取。';
+  }
+  // 保存当前分隔符
+  const sepInput = document.getElementById('batchSepInput');
+  if (sepInput) lastBatchSep = sepInput.value;
+  // 清空旧结果
+  const out = document.getElementById('batchResult');
+  if (out) out.innerHTML = '';
+  const s = document.getElementById('batchStatus');
+  if (s) s.textContent = '等待输入…';
+  lastBatchData = [];
+  if (ta) ta.focus();
+  // 切换后如果输入框有内容，立即按新模式重新解析
+  if (ta && ta.value) {
+    doBatch();
+  }
+}
+
 function clearBatchInput() {
   const ta = document.getElementById('batchInput');
   if (ta) ta.value = '';
@@ -6321,14 +6339,214 @@ function doBatch(isLive) {
   const status = document.getElementById('batchStatus');
   if (!text) { out.innerHTML = ''; lastBatchData = []; if (status) status.textContent = '等待输入…'; return; }
 
+  if (batchMode === 'decode') {
+    // 反向模式：编码 → 字符
+    const cps = parseCodepoints(text);
+    if (!cps.length) {
+      out.innerHTML = '';
+      lastBatchData = [];
+      if (status) status.textContent = '⚠ 未识别到有效编码，请检查格式';
+      return;
+    }
+    lastBatchData = cps.map(cp => {
+      const ch = safeChr(cp);
+      return ch ? analyzeChar(ch) : { cp, char: '', display: '∅', name: '无效码点', cpHex: cp.toString(16).toUpperCase().padStart(4,'0'), isSurrogatePair: false, flags: {}, blockCn: '—', categoryCn: '—', category: '—', utf16: '—', utf8: '—', html: '—', htmlHex: '—', css: '—', url: '—' };
+    });
+    renderBatchResult();
+    restoreBatchSep();
+    // 显示拼接结果
+    const sepEl = document.getElementById('batchSepInput');
+    let sep = sepEl ? sepEl.value : lastBatchSep;
+    if (sep === '\\n') sep = '\n';
+    const joinedStr = lastBatchData.map(d => d.char).join(sep);
+    const joinedDiv = document.createElement('div');
+    joinedDiv.className = 'batch-joined-result';
+    joinedDiv.innerHTML = '<span style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">拼接结果：</span>' +
+      '<span id="batchJoinedText">' + escapeHtml(joinedStr) + '</span>' +
+      '<button class="copy-joined" onclick="copyText(document.getElementById(\'batchJoinedText\').textContent);showToast(\'已复制\')">复制</button>';
+    out.insertBefore(joinedDiv, out.firstChild);
+    if (status) {
+      const t = lastBatchData.length;
+      const invalid = lastBatchData.filter(d => d.name === '无效码点').length;
+      status.textContent = `✓ 已解析 ${t} 个编码${invalid ? `（${invalid} 个无效）` : ''}`;
+    }
+    return;
+  }
+
+  // 正向模式：字符 → 编码
   const chars = [...text];
   lastBatchData = chars.map(ch => analyzeChar(ch));
   renderBatchResult();
+  restoreBatchSep();
   if (status) {
     const t = lastBatchData.length;
     const sur = lastBatchData.filter(d => d.isSurrogatePair).length;
     status.textContent = `✓ 已解析 ${t} 个字符${sur ? `（含 ${sur} 个代理对）` : ''}`;
   }
+}
+
+// HTML 命名实体映射
+const HTML_NAMED_ENTITIES = {'&amp;':0x26,'&lt;':0x3C,'&gt;':0x3E,'&quot;':0x22,'&apos;':0x27,'&nbsp;':0xA0,'&copy;':0xA9,'&reg;':0xAE,'&trade;':0x2122,'&hellip;':0x2026,'&mdash;':0x2014,'&ndash;':0x2013,'&laquo;':0xAB,'&raquo;':0xBB,'&times;':0xD7,'&divide;':0xF7,'&euro;':0x20AC,'&pound;':0xA3,'&yen;':0xA5,'&cent;':0xA2,'&deg;':0xB0,'&plusmn;':0xB1,'&para;':0xB6,'&sect;':0xA7,'&bull;':0x2022,'&dagger;':0x2020,'&Dagger;':0x2021,'&permil;':0x2030,'&prime;':0x2032,'&Prime;':0x2033,'&infin;':0x221E,'&ne;':0x2260,'&le;':0x2264,'&ge;':0x2265,'&AElig;':0xC6,'&aelig;':0xE6,'&OElig;':0x152,'&oelig;':0x153,'&Aring;':0xC5,'&aring;':0xE5,'&Aacute;':0xC1,'&aacute;':0xE1,'&Acirc;':0xC2,'&acirc;':0xE2,'&Agrave;':0xC0,'&agrave;':0xE0,'&Atilde;':0xC3,'&atilde;':0xE3,'&Auml;':0xC4,'&auml;':0xE4,'&Ccedil;':0xC7,'&ccedil;':0xE7,'&Eacute;':0xC9,'&eacute;':0xE9,'&Ecirc;':0xCA,'&ecirc;':0xEA,'&Egrave;':0xC8,'&egrave;':0xE8,'&Euml;':0xCB,'&euml;':0xEB,'&Iacute;':0xCD,'&iacute;':0xED,'&Icirc;':0xCE,'&icirc;':0xEE,'&Igrave;':0xCC,'&igrave;':0xEC,'&Iuml;':0xCF,'&iuml;':0xEF,'&Ntilde;':0xD1,'&ntilde;':0xF1,'&Oacute;':0xD3,'&oacute;':0xF3,'&Ocirc;':0xD4,'&ocirc;':0xF4,'&Ograve;':0xD2,'&ograve;':0xF2,'&Otilde;':0xD5,'&otilde;':0xF5,'&Ouml;':0xD6,'&ouml;':0xF6,'&szlig;':0xDF,'&Uacute;':0xDA,'&uacute;':0xFA,'&Ucirc;':0xDB,'&ucirc;':0xFB,'&Ugrave;':0xD9,'&ugrave;':0xF9,'&Uuml;':0xDC,'&uuml;':0xFC,'&Yacute;':0xDD,'&yacute;':0xFD,'&yuml;':0xFF,'&Theta;':0x398,'&theta;':0x3B8,'&Sigma;':0x3A3,'&sigma;':0x3C3,'&Pi;':0x3A0,'&pi;':0x3C0,'&Omega;':0x3A9,'&omega;':0x3C9,'&Alpha;':0x391,'&alpha;':0x3B1,'&Beta;':0x392,'&beta;':0x3B2,'&Gamma;':0x393,'&gamma;':0x3B3,'&Delta;':0x394,'&delta;':0x3B4,'&Epsilon;':0x395,'&epsilon;':0x3B5,'&Zeta;':0x396,'&zeta;':0x3B6,'&Eta;':0x397,'&eta;':0x3B7,'&Iota;':0x399,'&iota;':0x3B9,'&Kappa;':0x39A,'&kappa;':0x3BA,'&Lambda;':0x39B,'&lambda;':0x3BB,'&Mu;':0x39C,'&mu;':0x3BC,'&Nu;':0x39D,'&nu;':0x3BD,'&Xi;':0x39E,'&xi;':0x3BE,'&Omicron;':0x39F,'&omicron;':0x3BF,'&Rho;':0x3A1,'&rho;':0x3C1,'&Tau;':0x3A4,'&tau;':0x3C4,'&Upsilon;':0x3A5,'&upsilon;':0x3C5,'&Phi;':0x3A6,'&phi;':0x3C6,'&Chi;':0x3A7,'&chi;':0x3C7,'&Psi;':0x3A8,'&psi;':0x3C8,'&spades;':0x2660,'&clubs;':0x2663,'&hearts;':0x2665,'&diams;':0x2666,'&lsquo;':0x2018,'&rsquo;':0x2019,'&ldquo;':0x201C,'&rdquo;':0x201D,'&lsaquo;':0x2039,'&rsaquo;':0x203A,'&sbquo;':0x201A,'&bdquo;':0x201E,'&fnof;':0x192,'&minus;':0x2212,'&lowast;':0x2217,'&radic;':0x221A,'&sum;':0x2211,'&prod;':0x220F,'&int;':0x222B,'&frac14;':0xBC,'&frac12;':0xBD,'&frac34;':0xBE,'&ordf;':0xAA,'&ordm;':0xBA,'&iexcl;':0xA1,'&iquest;':0xBF,'&macr;':0xAF,'&acute;':0xB4,'&cedil;':0xB8,'&uml;':0xA8,'&brvbar;':0xA6,'&micro;':0xB5,'&middot;':0xB7,'&cedil;':0xB8,'&sup1;':0xB9,'&sup2;':0xB2,'&sup3;':0xB3,'&shy;':0xAD,'&circ;':0x2C6,'&tilde;':0x2DC,'&ensp;':0x2002,'&emsp;':0x2003,'&thinsp;':0x2009,'&zwnj;':0x200C,'&zwj;':0x200D,'&lrm;':0x200E,'&rlm;':0x200F};
+
+// 从文本中提取所有码点（支持多种格式）
+function parseCodepoints(text) {
+  // 支持的格式：
+  //  1. U+XXXX / u+XXXX
+  //  2. \uXXXX / \u{XXXX} (JS 转义，含代理对自动合并)
+  //  3. 0xXXXX
+  //  4. &#NNNN; (十进制 HTML 实体，含代理对自动合并)
+  //  5. &#xXXXX; (十六进制 HTML 实体，含代理对自动合并)
+  //  6. &name; (HTML 命名实体，如 &amp; &copy; &lt; 等)
+  //  7. \XXXX (CSS 转义，1-6 位十六进制)
+  //  8. %XX (URL 编码，自动解码多字节 UTF-8)
+  //  9. 纯十进制码点
+  // 10. 纯十六进制码点
+  // 支持分隔输入与混合文本（自动提取有明确标记的编码）
+
+  const cps = [];
+  let pos = 0;
+  const len = text.length;
+
+  // 检测是否含有明确编码标记（用于区分分隔输入与混合文本）
+  const hasMarker = /[Uu]\+|\\u[\d{]|0[xX]|&#|&[a-zA-Z]+;|\\[0-9A-Fa-f]{1,6}(?:\s|$)|%[0-9A-Fa-f]{2}/.test(text);
+
+  function pushCp(cp) {
+    if (cp !== null && cp >= 0 && cp <= 0x10FFFF && !(cp >= 0xD800 && cp <= 0xDFFF)) {
+      cps.push(cp);
+    }
+  }
+
+  // 合并 UTF-16 代理对：如果前一个码点是高位代理且当前是低位代理，合并为补充码点
+  function pushCpWithSurrogate(cp) {
+    if (cp === null) return;
+    if (cp >= 0xD800 && cp <= 0xDBFF && cps.length > 0) {
+      const prev = cps[cps.length - 1];
+      if (prev >= 0xD800 && prev <= 0xDBFF) {
+        // 前一个是高位代理，当前也是高位代理 → 前一个无效，替换
+        cps[cps.length - 1] = cp;
+        return;
+      }
+    }
+    if (cp >= 0xDC00 && cp <= 0xDFFF && cps.length > 0) {
+      const prev = cps[cps.length - 1];
+      if (prev >= 0xD800 && prev <= 0xDBFF) {
+        // 合并代理对
+        cps[cps.length - 1] = (prev - 0xD800) * 0x400 + (cp - 0xDC00) + 0x10000;
+        return;
+      }
+    }
+    pushCp(cp);
+  }
+
+  while (pos < len) {
+    const ch = text[pos];
+    let matched = false;
+
+    // --- 1. U+XXXX / u+XXXX ---
+    if ((ch === 'U' || ch === 'u') && pos + 1 < len && text[pos + 1] === '+') {
+      const m = text.slice(pos).match(/^[Uu]\+([0-9A-Fa-f]{1,6})/);
+      if (m) { pushCp(parseInt(m[1], 16)); pos += m[0].length; matched = true; }
+    }
+
+    // --- 2. \uXXXX / \u{XXXX} (JS 转义) ---
+    if (!matched && ch === '\\' && pos + 1 < len && text[pos + 1] === 'u') {
+      // \u{XXXXX}
+      let m = text.slice(pos).match(/^\\u\{([0-9A-Fa-f]{1,6})\}/);
+      if (m) {
+        pushCpWithSurrogate(parseInt(m[1], 16));
+        pos += m[0].length; matched = true;
+      }
+      // \uXXXX (恰好 4 位十六进制)
+      if (!matched) {
+        m = text.slice(pos).match(/^\\u([0-9A-Fa-f]{4})/);
+        if (m) {
+          pushCpWithSurrogate(parseInt(m[1], 16));
+          pos += m[0].length; matched = true;
+        }
+      }
+    }
+
+    // --- 3. 0xXXXX ---
+    if (!matched && ch === '0' && pos + 1 < len && (text[pos + 1] === 'x' || text[pos + 1] === 'X')) {
+      const m = text.slice(pos).match(/^0[xX]([0-9A-Fa-f]{1,6})/);
+      if (m) { pushCp(parseInt(m[1], 16)); pos += m[0].length; matched = true; }
+    }
+
+    // --- 4 & 5. &#NNNN; / &#xXXXX; (HTML 数字实体) ---
+    if (!matched && ch === '&' && pos + 1 < len && text[pos + 1] === '#') {
+      let m = text.slice(pos).match(/^&#[xX]([0-9A-Fa-f]{1,6});?/);
+      if (m) {
+        pushCpWithSurrogate(parseInt(m[1], 16));
+        pos += m[0].length; matched = true;
+      }
+      if (!matched) {
+        m = text.slice(pos).match(/^&#(\d+);?/);
+        if (m) {
+          pushCpWithSurrogate(parseInt(m[1], 10));
+          pos += m[0].length; matched = true;
+        }
+      }
+    }
+
+    // --- 6. &name; (HTML 命名实体) ---
+    if (!matched && ch === '&' && pos + 1 < len && /[a-zA-Z]/.test(text[pos + 1])) {
+      const m = text.slice(pos).match(/^&[a-zA-Z]+;/);
+      if (m && HTML_NAMED_ENTITIES[m[0]] !== undefined) {
+        pushCp(HTML_NAMED_ENTITIES[m[0]]);
+        pos += m[0].length; matched = true;
+      }
+    }
+
+    // --- 7. \XXXX (CSS 转义，1-6 位十六进制，可跟一个可选空格) ---
+    if (!matched && ch === '\\') {
+      const m = text.slice(pos).match(/^\\([0-9A-Fa-f]{1,6})\s?/);
+      if (m) {
+        // 排除已被上面 \u 处理的情况（\u 开头且后面不是 { 也不是恰好 4 位十六进制时，才可能是 CSS）
+        // 实际上 \uXXXX 已在第 2 步处理，此处 \u 开头的不会再匹配到（因为第 2 步优先）
+        pushCp(parseInt(m[1], 16));
+        pos += m[0].length; matched = true;
+      }
+    }
+
+    // --- 8. %XX (URL 编码，连续 %XX 序列解码为 UTF-8) ---
+    if (!matched && ch === '%' && pos + 2 < len && /[0-9A-Fa-f]{2}/.test(text.slice(pos + 1, pos + 3))) {
+      let end = pos;
+      const bytes = [];
+      while (end < len && text[end] === '%' && end + 2 < len && /[0-9A-Fa-f]{2}/.test(text.slice(end + 1, end + 3))) {
+        bytes.push(parseInt(text.slice(end + 1, end + 3), 16));
+        end += 3;
+      }
+      try {
+        const decoded = new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes));
+        for (const c of decoded) pushCp(c.codePointAt(0));
+        pos = end; matched = true;
+      } catch (e) {
+        // UTF-8 解码失败，逐字节当作 Latin-1 处理
+        for (const b of bytes) pushCp(b);
+        pos = end; matched = true;
+      }
+    }
+
+    // --- 9 & 10. 纯十进制 / 纯十六进制（仅在分隔 token 中尝试） ---
+    if (!matched && !hasMarker) {
+      const m = text.slice(pos).match(/^(\d{1,7}|[0-9A-Fa-f]{1,6})(?=[\s,;，；|\t\n\r]|$)/);
+      if (m) {
+        const tok = m[1];
+        let cp;
+        if (/^\d+$/.test(tok)) {
+          cp = parseInt(tok, 10);
+        } else {
+          cp = parseInt(tok, 16);
+        }
+        if (cp >= 0 && cp <= 0x10FFFF) pushCp(cp);
+        pos += m[0].length; matched = true;
+      }
+    }
+
+    if (!matched) pos++;
+  }
+
+  return cps;
 }
 
 function renderBatchResult() {
@@ -6356,14 +6574,14 @@ function renderBatchResult() {
           </select>
         </label>
         <label>分隔符：
-          <select id="batchSep">
-            <option value="/">/ (斜杠)</option>
-            <option value=",">, (逗号)</option>
-            <option value=", ">、 (顿号)</option>
-            <option value=" ">(空格)</option>
-            <option value="\\n">\\n (换行)</option>
-            <option value="">无分隔符</option>
-          </select>
+          <span class="sep-btns">
+            <button class="sep-btn" onclick="setBatchSep('/')" title="斜杠">/</button>
+            <button class="sep-btn" onclick="setBatchSep(',')" title="逗号">,</button>
+            <button class="sep-btn" onclick="setBatchSep(' ')" title="空格">␣</button>
+            <button class="sep-btn" onclick="setBatchSep('\\n')" title="换行">↵</button>
+            <button class="sep-btn" onclick="setBatchSep('')" title="无分隔符">∅</button>
+          </span>
+          <input type="text" id="batchSepInput" class="batch-sep-input" value=" " placeholder="自定义" title="输入自定义分隔符，\n 表示换行" maxlength="20">
         </label>
         <button class="batch-export-btn" onclick="copyBatchColumn()">📋 复制本列 (${total} 项)</button>
       </div>
@@ -6409,26 +6627,94 @@ function renderBatchResult() {
       </div>
     </div>
   `;
+  // 编码模式预览：显示当前列+分隔符的复制效果
+  const previewDiv = document.createElement('div');
+  previewDiv.id = 'batchPreview';
+  previewDiv.className = 'batch-joined-result';
+  previewDiv.style.marginBottom = '10px';
+  const resultDiv = out.querySelector('.batch-result');
+  if (resultDiv) resultDiv.insertBefore(previewDiv, resultDiv.children[1]);
+  updateBatchPreview();
+  // 切换列或分隔符时实时更新预览（仅绑定一次）
+  if (!out._batchListenersBound) {
+    out._batchListenersBound = true;
+    out.addEventListener('change', e => {
+      if (e.target.id === 'batchCopyCol' || e.target.id === 'batchSepInput') updateBatchPreview();
+    });
+    out.addEventListener('input', e => {
+      if (e.target.id === 'batchSepInput') updateBatchPreview();
+    });
+  }
+}
+
+function updateBatchPreview() {
+  const preview = document.getElementById('batchPreview');
+  if (!preview || !lastBatchData.length) return;
+  // 解码模式已有拼接结果，隐藏复制预览
+  if (batchMode === 'decode') { preview.style.display = 'none'; return; }
+  preview.style.display = '';
+  const col = document.getElementById('batchCopyCol').value;
+  if (!col) return;
+  let sep = document.getElementById('batchSepInput').value;
+  if (sep === '\\n' || sep === '\n') sep = '\n';
+  const colNames = {cp:'U+ 编码',cpDec:'十进制',html:'HTML(十进制)',htmlHex:'HTML(十六进制)',css:'CSS',utf8:'UTF-8',utf16:'UTF-16',url:'URL',char:'原字符',display:'显示标记'};
+  const values = lastBatchData.map(d => {
+    let v = {cp:`U+${d.cpHex}`,cpDec:String(d.cp),html:d.html,htmlHex:d.htmlHex,css:d.css,utf8:d.utf8,utf16:d.utf16,url:d.url,char:d.char,display:d.display}[col];
+    if (v === undefined) return '';
+    if (col === 'utf8' || col === 'utf16') v = v.replace(/ /g, '/');
+    return v;
+  });
+  const text = values.join(sep);
+  const sepDisplay = sep === '\n' ? '↵' : (sep === ' ' ? '␣' : (sep === '' ? '∅' : sep));
+  preview.innerHTML = '<span style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">复制预览 (' + (colNames[col]||col) + '，分隔符: ' + escapeHtml(sepDisplay) + '，' + values.length + ' 项)：</span>' +
+    '<span style="user-select:all;cursor:text">' + escapeHtml(text) + '</span>';
+}
+
+function setBatchSep(val) {
+  const input = document.getElementById('batchSepInput');
+  if (!input) return;
+  input.value = (val === '\\n') ? '\n' : val;
+  lastBatchSep = input.value;
+  // 更新按钮高亮
+  const btns = input.parentElement.querySelectorAll('.sep-btn');
+  const labels = ['/', ',', ' ', '\\n', ''];
+  const actualVal = (val === '\\n') ? '\n' : val;
+  btns.forEach((b, i) => b.classList.toggle('on', labels[i] === actualVal || (labels[i] === '\\n' && actualVal === '\n')));
+  updateBatchPreview();
+}
+
+function restoreBatchSep() {
+  const input = document.getElementById('batchSepInput');
+  if (input && lastBatchSep !== ' ') {
+    input.value = lastBatchSep;
+  }
+  updateBatchPreview();
 }
 
 function copyBatchColumn() {
   if (!lastBatchData.length) { showToast('请先解析字符'); return; }
   const col = document.getElementById('batchCopyCol').value;
-  let sep = document.getElementById('batchSep').value;
+  let sep = document.getElementById('batchSepInput').value;
   if (sep === '\\n') sep = '\n';
 
-  const values = lastBatchData.map(d => ({
-    cp: `U+${d.cpHex}`,
-    cpDec: String(d.cp),
-    html: d.html,
-    htmlHex: d.htmlHex,
-    css: d.css,
-    utf8: d.utf8,
-    utf16: d.utf16,
-    url: d.url,
-    char: d.char,
-    display: d.display,
-  }[col])).filter(v => v !== undefined);
+  const values = lastBatchData.map(d => {
+    let v = {
+      cp: `U+${d.cpHex}`,
+      cpDec: String(d.cp),
+      html: d.html,
+      htmlHex: d.htmlHex,
+      css: d.css,
+      utf8: d.utf8,
+      utf16: d.utf16,
+      url: d.url,
+      char: d.char,
+      display: d.display,
+    }[col];
+    if (v === undefined) return undefined;
+    // UTF-8/UTF-16 字节间始终用 / 分隔，避免与字符分隔符混淆
+    if (col === 'utf8' || col === 'utf16') v = v.replace(/ /g, '/');
+    return v;
+  }).filter(v => v !== undefined);
 
   const text = values.join(sep);
   copyText(text);
