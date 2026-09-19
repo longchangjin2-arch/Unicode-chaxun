@@ -518,17 +518,6 @@ button, input, select, textarea, .sp-mode, .tp-btn, .file-upload-btn {
 }
 .control-bar button.toggle-btn:hover:not(.active) { background: #e9ecef; }
 .control-bar .ctrl-label { font-size: 13px; color: var(--muted); }
-.control-bar .ctrl-batch-fav {
-  background: var(--accent); color: #fff;
-  border: 1px solid var(--accent); border-radius: 8px;
-  padding: 7px 16px; font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: all .15s;
-}
-.control-bar .ctrl-batch-fav:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-.control-bar .ctrl-batch-fav.warn {
-  background: #fff; color: #e53935; border-color: #e53935;
-}
-.control-bar .ctrl-batch-fav.warn:hover { background: #fdecea; }
 .control-bar .ctrl-click-fav {
   background: #fff; color: var(--text);
   border: 1px solid var(--border); border-radius: 8px;
@@ -562,8 +551,6 @@ body.dark .cell.cell-favmode:active { background: #3a2a10; }
   background: var(--card); padding: 4px 10px; border-radius: 6px;
   border: 1px solid var(--border);
 }
-body.dark .control-bar .ctrl-batch-fav.warn { background: #2a1620; color: #ff7c7c; border-color: #b93a3a; }
-body.dark .control-bar .ctrl-batch-fav.warn:hover { background: #3a1e2a; }
 
 .content-scroll {
   flex: 1; overflow-y: auto; overflow-x: hidden;
@@ -1283,18 +1270,18 @@ body.dark .settings-reset-btn:hover { background: #3d4a6c; }
       <div class="name" id="zoomTitle">🔍️ 放大预览</div>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px">
-      <canvas id="zoomCanvas" width="400" height="400" style="border:1px solid #ddd;border-radius:8px;background:white"></canvas>
+      <canvas id="zoomCanvas" width="400" height="400" style="border:1px solid var(--border);border-radius:8px;background:white"></canvas>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
-        <label style="font-size:14px;color:#666">字号:</label>
+        <label style="font-size:14px;color:var(--muted)">字号:</label>
         <input type="range" id="zoomSize" min="100" max="400" value="250" oninput="updateZoomPreview()" style="width:150px">
-        <span id="zoomSizeValue" style="font-size:14px;color:#666;min-width:40px">250</span>
+        <span id="zoomSizeValue" style="font-size:14px;color:var(--muted);min-width:40px">250</span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
-        <label style="font-size:14px;color:#666">颜色:</label>
+        <label style="font-size:14px;color:var(--muted)">颜色:</label>
         <input type="color" id="zoomColor" value="#000000" onchange="updateZoomPreview()">
-        <label style="font-size:14px;color:#666">背景:</label>
+        <label style="font-size:14px;color:var(--muted)">背景:</label>
         <input type="color" id="zoomBgColor" value="#ffffff" onchange="updateZoomPreview()">
-        <label style="font-size:14px;color:#666">粗体:</label>
+        <label style="font-size:14px;color:var(--muted)">粗体:</label>
         <input type="checkbox" id="zoomBold" onchange="updateZoomPreview()">
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
@@ -1733,10 +1720,6 @@ const BIDI_DESC = {
   'WS':'空白','ON':'其他中性','LRE':'左到右嵌入','LRO':'左到右覆盖',
   'RLE':'右到左嵌入','RLO':'右到左覆盖','PDF':'弹出方向格式',
   'LRI':'左到右隔离','RLI':'右到左隔离','FSI':'首个强隔离','PDI':'弹出方向隔离',
-};
-
-const EAW_DESC = {
-  'F':'全宽','H':'半宽','W':'宽','Na':'窄','A':'模糊','N':'中性',
 };
 
 const RANDOM_RANGES = [
@@ -3346,8 +3329,13 @@ function addToHistory(cp) {
 }
 
 function clearHistory() {
+  if (!history.length) { showToast('还没有浏览记录'); return; }
+  const n = history.length;
+  if (!confirm(`确定清除全部 ${n} 条浏览记录？此操作不可撤销。`)) return;
   history = [];
   saveHistory();
+  addLog('清除记录', `浏览记录 ${n} 条`);
+  if (currentView === 'history') showHistory();
   showToast('浏览记录已清除');
 }
 
@@ -3369,6 +3357,8 @@ function addLog(action, detail) {
 }
 
 function clearLogs() {
+  if (!appLogs.length) { showToast('暂无日志'); return; }
+  if (!confirm(`确定清空全部 ${appLogs.length} 条操作日志？此操作不可撤销。`)) return;
   appLogs = [];
   try { localStorage.removeItem('unicode_logs'); } catch(e) {}
   showToast('日志已清除');
@@ -3466,8 +3456,8 @@ function openCategoryPicker(cp, ch) {
     for (const cat of allCategories) {
       const checked = existing.includes(cat) ? 'checked' : '';
       html += `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
-        <input type="checkbox" ${checked} onchange="toggleCharCategory(${cp}, '${cat.replace(/'/g, "\\'")}', this.checked)">
-        <span>${cat}</span>
+        <input type="checkbox" ${checked} onchange="toggleCharCategory(${cp}, '${escapeJsAttr(cat)}', this.checked)">
+        <span>${escapeHtml(cat)}</span>
         <span style="color:var(--muted);font-size:12px">(${favCategories[cat].length} 个字符)</span>
       </label>`;
     }
@@ -3539,7 +3529,7 @@ function saveMeaning(cp) {
     const meaning = input.value;
     setCustomMeaning(cp, meaning);
     showToast(meaning ? '含义已保存' : '含义已清除');
-    showDetail(cp);
+    showDetail(cp, true);
   }
 }
 function clearMeaning(cp) {
@@ -3548,7 +3538,7 @@ function clearMeaning(cp) {
     input.value = '';
     setCustomMeaning(cp, '');
     showToast('含义已清除');
-    showDetail(cp);
+    showDetail(cp, true);
   }
 }
 function saveWordInfo(cp) {
@@ -3559,7 +3549,7 @@ function saveWordInfo(cp) {
     p: pinyin.trim(), s: strokes.trim(), r: radical.trim()
   });
   showToast('字典信息已保存');
-  showDetail(cp);
+  showDetail(cp, true);
 }
 function clearWordInfo(cp) {
   document.getElementById(`wordPinyin_${cp}`) && (document.getElementById(`wordPinyin_${cp}`).value = '');
@@ -3567,7 +3557,7 @@ function clearWordInfo(cp) {
   document.getElementById(`wordRadical_${cp}`) && (document.getElementById(`wordRadical_${cp}`).value = '');
   setCustomWordInfo(cp, {});
   showToast('字典信息已清除');
-  showDetail(cp);
+  showDetail(cp, true);
 }
 function saveAllInfo(cp) {
   const pinyin = document.getElementById(`wordPinyin_${cp}`)?.value || '';
@@ -3586,7 +3576,7 @@ function saveAllInfo(cp) {
   }
   
   showToast('信息已保存');
-  showDetail(cp);
+  showDetail(cp, true);
 }
 
 function saveFavorites() {
@@ -3881,7 +3871,7 @@ async function resetUnicodeData() {
 
 // 清空所有个人数据（收藏/字义/浏览记录/最近搜索）
 async function clearAllUserData() {
-  const step1 = confirm('⚠️ 确定清空所有个人数据？\n\n将清除以下内容：\n• 我的收藏\n• 自定义字义\n• 自定义字典\n• 收藏分类\n• 浏览记录\n• 最近搜索\n• 管理 PIN 码\n• 操作日志');
+  const step1 = confirm('⚠️ 确定清空所有个人数据？\n\n将清除以下内容：\n• 我的收藏\n• 自定义字义\n• 自定义字典\n• 收藏分类\n• 浏览记录\n• 最近搜索\n• 操作日志');
   if (!step1) return;
   const step2 = confirm('❗ 二次确认\n\n此操作不可撤销，所有个人数据将永久丢失！\n\n如需保留，请先在设置中"导出个人数据"备份。\n\n确定继续吗？');
   if (!step2) return;
@@ -4336,6 +4326,39 @@ const INVISIBLE_MARKS = {
   0x1F:['␟','US 单元分隔符'],
   0x7F:['␡','DEL 删除'],
   0x20:['␣','SP 空格'],
+  // C1 控制字符（U+0080–U+009F）：无对应图形符号，用标准缩写标记
+  0x80:['PAD','PAD 填充符'],
+  0x81:['HOP','HOP 高八位预设'],
+  0x82:['BPH','BPH 允许换行'],
+  0x83:['NBH','NBH 禁止换行'],
+  0x84:['IND','IND 索引'],
+  0x85:['NEL','NEL 下一行'],
+  0x86:['SSA','SSA 选择区起始'],
+  0x87:['ESA','ESA 选择区结束'],
+  0x88:['HTS','HTS 水平制表设置'],
+  0x89:['HTJ','HTJ 水平制表对齐'],
+  0x8A:['VTS','VTS 垂直制表设置'],
+  0x8B:['PLD','PLD 部分行向下'],
+  0x8C:['PLU','PLU 部分行向上'],
+  0x8D:['RI','RI 反向索引'],
+  0x8E:['SS2','SS2 单移 2'],
+  0x8F:['SS3','SS3 单移 3'],
+  0x90:['DCS','DCS 设备控制字符串'],
+  0x91:['PU1','PU1 私用 1'],
+  0x92:['PU2','PU2 私用 2'],
+  0x93:['STS','STS 字符串终止设置'],
+  0x94:['CCH','CCH 取消字符'],
+  0x95:['MW','MW 消息等待'],
+  0x96:['SPA','SPA 保护区起始'],
+  0x97:['EPA','EPA 保护区结束'],
+  0x98:['SOS','SOS 字符串起始'],
+  0x99:['SGC','SGC 单图形字符'],
+  0x9A:['SCI','SCI 单字符引入'],
+  0x9B:['CSI','CSI 控制序列引入'],
+  0x9C:['ST','ST 字符串终止'],
+  0x9D:['OSC','OSC 操作系统命令'],
+  0x9E:['PM','PM 私用消息'],
+  0x9F:['APC','APC 应用程序命令'],
   // 零宽字符与格式字符
   0x00A0:['⍽','NBSP 不换行空格'],
   0x200B:['ZWSP','零宽空格'],
@@ -4447,6 +4470,19 @@ function getCharDisplay(cp) {
 }
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+// 安全嵌入「内联事件属性里的单引号 JS 字符串」：
+// 先做 HTML 实体转义（防止 " 截断属性），再做 JS 转义（防止 ' 截断字符串字面量）
+// 注意顺序：& 必须最先处理，反斜杠必须在单引号之前处理
+function escapeJsAttr(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r?\n/g, '\\n');
 }
 
 function getCharName(cp) {
@@ -4628,7 +4664,11 @@ function setActiveNav(view) {
     scroll.classList.add('view-enter');
   }
 }
-function setTitle(title) { document.getElementById('pageTitle').textContent = title; }
+function setTitle(title) {
+  document.getElementById('pageTitle').textContent = title;
+  // 标签页标题同步，避免停留在上一次视图（如分类详情）的标题
+  document.title = title ? `${title} - Unicode编码查询` : 'Unicode编码查询';
+}
 function setCount(cnt) { document.getElementById('pageCount').textContent = cnt; }
 
 function clearControlBar() {
@@ -4690,11 +4730,19 @@ function jumpToUnicode(raw) {
   const cp = parseInt(codeStr, 16);
   if (!Number.isFinite(cp) || cp < 0 || cp > 0x10FFFF) { showToast('无效编码'); return; }
   if (cp >= 0xD800 && cp <= 0xDFFF) { showToast('代理码点不可用'); return; }
+  // 被「跳过控制字符」排除的码点不在顺序里，直接说明
+  if (skipC0InAllView && cp < ALL_SKIP_C0) {
+    showToast(`U+${cp.toString(16).toUpperCase().padStart(4,'0')} 是 C0 控制字符，已被「跳过控制字符」排除；可关闭该开关，或在搜索中查看`);
+    return;
+  }
   buildAllSegIndex();
-  // 计算全局索引（排除代理对区间）
+  // 计算全局索引（排除代理对区间；跳过控制字符时再减去段首偏移）
   const segIdx = Math.floor(cp / ALL_SEG_SIZE);
   const segStart = segIdx * ALL_SEG_SIZE;
   let offset = cp - segStart;
+  if (segIdx === 0 && skipC0InAllView) {
+    offset -= ALL_SKIP_C0;
+  }
   // 段 0 中代理对之后的码点需要减去 2048
   if (segIdx === 0 && cp >= 0xE000) {
     offset -= 0xDFFF - 0xD800 + 1;
@@ -4716,7 +4764,7 @@ function jumpToUnicode(raw) {
   }, 100);
 }
 
-// 渲染网格视图的控制栏（点击收藏模式开关 + 批量收藏按钮）
+// 渲染网格视图的控制栏（跳过控制字符开关 + 点击收藏模式开关 + 收藏进度）
 // pageCps: 当前页的字符数组
 function renderGridControlBar(pageCps) {
   if (!pageCps || !pageCps.length) { clearControlBar(); return; }
@@ -4726,8 +4774,13 @@ function renderGridControlBar(pageCps) {
   let favCount = 0;
   for (const cp of pageCps) if (favorites.has(cp)) favCount++;
   const bar = document.getElementById('controlBar');
+  // 「全部字符」视图额外提供"跳过控制字符"开关（默认开，首屏从 U+0020 开始）
+  const skipBtn = currentView === 'all'
+    ? `<button class="toggle-btn ${skipC0InAllView ? 'active' : ''}" onclick="toggleSkipControlChars()" title="开启：顺序浏览从 U+0020（空格）开始，跳过 32 个不可打印的 C0 控制字符；关闭：从 U+0000 开始，包含全部码点">${skipC0InAllView ? '🚫 跳过控制字符：开' : '🚫 跳过控制字符：关'}</button>`
+    : '';
   bar.innerHTML = `
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; width:100%">
+      ${skipBtn}
       <button class="ctrl-click-fav ${clickFavMode?'on':''}" onclick="setClickFavMode(${clickFavMode?'false':'true'})" title="${clickFavMode?'关闭点击收藏，点击字符恢复查看详情（会弹模态框）':'点击收藏模式：点击字符直接收藏或取消，不弹模态框'}">
         ${clickFavMode?'🖱️ 点击收藏：开':'🖱️ 点击收藏：关'}
       </button>
@@ -4823,31 +4876,19 @@ function renderCell(cp, animIdx) {
   const animStyle = (typeof animIdx === 'number') ? ` style="animation-delay:${Math.min(animIdx*0.003, 0.3)}s"` : '';
   const enterCls = (typeof animIdx === 'number') ? 'cell-enter' : ''; // 虚拟滚动重渲染时不播入场动画
   const modeCls = clickFavMode ? 'cell-favmode' : '';
-  const modeTitle = clickFavMode ? (isFav ? '点击取消收藏' : '点击加入收藏') : '';
+  const cpHex = cp.toString(16).toUpperCase().padStart(4, '0');
+  // 非"点击收藏"模式下，悬停提示字符名称，不用打开详情就能辨认
+  const charName = getCharName(cp) || `U+${cpHex}`;
+  const cellTitle = clickFavMode ? (isFav ? '点击取消收藏' : '点击加入收藏') : `${charName} (U+${cpHex})`;
   const onclk = clickFavMode ? `onclick="quickToggleFav(${cp})"` : `onclick="showDetail(${cp})"`;
 
   return `
-    <div class="cell ${enterCls} ${warnClasses.join(' ')} ${modeCls}" ${animStyle} ${onclk} title="${modeTitle}">
+    <div class="cell ${enterCls} ${warnClasses.join(' ')} ${modeCls}" ${animStyle} ${onclk} data-name="${escapeHtml(charName)}" data-hex="${cpHex}" title="${escapeHtml(cellTitle)}">
       ${badge}
       <span class="quick-fav ${isFav?'on':''}" title="${isFav?'已收藏':'未收藏'}">${isFav?'★':'☆'}</span>
       <span class="${chClass}">${escapeHtml(display)}</span>
-      <span class="cp">U+${cp.toString(16).toUpperCase().padStart(4,'0')}</span>
+      <span class="cp">U+${cpHex}</span>
     </div>`;
-}
-
-function renderList(items, clickHandler) {
-  const el = document.getElementById('content');
-  let html = '';
-  for (const item of items) {
-    html += `
-      <div class="list-item" onclick="${clickHandler}(${item.id})">
-        <div class="title">${item.title}</div>
-        <div class="desc">${item.desc}</div>
-      </div>`;
-  }
-  el.innerHTML = html;
-  document.getElementById('pagination').innerHTML = '';
-  setCount('');
 }
 
 // ============================================================
@@ -4903,14 +4944,24 @@ function renderRandomControls() {
 
 function onRandomPartitionChange() {
   randomPartition = document.getElementById('randomPartition').value;
-  randomCount = parseInt(document.getElementById('randomCount').value) || 200;
-  if (randomCount < 10) randomCount = 10;
-  if (randomCount > 2000) randomCount = 2000;
+  readRandomCount();
   generateRandomChars();
 }
 
+// 读取并钳制「数量」输入框（10–2000），并把钳制后的值回写到输入框，
+// 否则输入 5000 时界面显示 5000、实际只出 2000，输入框在骗人
+function readRandomCount() {
+  const el = document.getElementById('randomCount');
+  let n = el ? parseInt(el.value, 10) : NaN;
+  if (!Number.isFinite(n)) n = randomCount;
+  n = Math.min(2000, Math.max(10, n));
+  randomCount = n;
+  if (el && el.value !== String(n)) el.value = n;
+  return n;
+}
+
 function generateRandomChars() {
-  randomCount = parseInt(document.getElementById('randomCount')?.value) || randomCount;
+  readRandomCount();
   const chars = [];
 
   if (randomPartition === 'all') {
@@ -5014,6 +5065,7 @@ function generateRandomChars() {
 // ============================================================
 function showOverview() {
   currentView = 'overview';
+  currentChars = [];   // 清掉上个视图的列表，避免详情弹窗出现莫名的"3 / 96"翻页导航
   setTitle('🏠 总览');
   setActiveNav('overview');
   clearControlBar();
@@ -5026,7 +5078,8 @@ function showOverview() {
   const emojiCount = EMOJI_RANGES.reduce((sum, [s,e]) => sum + (e-s+1), 0);
 
   const recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
-  const recentFavChars = Array.from(favorites).slice(0, 12);
+  // Set 按收藏先后插入，末尾才是最新收藏；「最近收藏」应显示最后 12 个并倒序
+  const recentFavChars = Array.from(favorites).slice(-12).reverse();
   const historyRecent = history.slice(0, 10);
 
   const el = document.getElementById('content');
@@ -5104,7 +5157,7 @@ function showOverview() {
       ${recentSearches.length > 0 ? `
         <div class="section-title">🔍️ 最近搜索</div>
         <div class="recent-list">
-          ${recentSearches.slice(0, 12).map(s => `<div class="recent-item" onclick="quickSearch('${escapeHtml(s).replace(/'/g,"\\'")}')">${escapeHtml(s)}</div>`).join('')}
+          ${recentSearches.slice(-12).reverse().map(s => `<div class="recent-item" onclick="quickSearch('${escapeJsAttr(s)}')">${escapeHtml(s)}</div>`).join('')}
         </div>
       ` : ''}
 
@@ -5142,6 +5195,11 @@ let allSegOffsets = null;     // 每段的全局起始索引
 let allSegFirstCP = null;     // 每段的第一个码点
 let allSegCounts = null;      // 每段码点数
 const ALL_SEG_SIZE = 0x10000; // 每段大小（65536）
+// 「全部字符」默认跳过 C0 控制字符（U+0000–U+001F，不可打印）。
+// 它们排在最前面会让首屏大半个屏幕都是红色警告格，第一印象很差；
+// 关掉这个开关即可按原始码点顺序从 U+0000 开始浏览（控制字符依然完全可达）。
+let skipC0InAllView = true;
+const ALL_SKIP_C0 = 0x20;     // 被跳过的 C0 控制字符个数（U+0000..U+001F）
 
 function buildAllSegIndex() {
   if (allSegOffsets) return;
@@ -5150,8 +5208,9 @@ function buildAllSegIndex() {
   for (let segStart = 0; segStart <= 0x10FFFF; segStart += ALL_SEG_SIZE) {
     const segEnd = Math.min(segStart + ALL_SEG_SIZE, 0x110000);
     let segCount = segEnd - segStart;
-    // 排除代理对码点（0xD800-0xDFFF，仅在段 0 中出现）
-    if (segStart <= 0xDFFF && segEnd > 0xD800) {
+    // 段 0：可选跳过 C0 控制字符，并排除代理对码点（0xD800-0xDFFF 只在段 0）
+    if (segStart === 0) {
+      if (skipC0InAllView) segCount -= ALL_SKIP_C0;
       const surrStart = Math.max(0xD800, segStart);
       const surrEnd = Math.min(0xDFFF + 1, segEnd);
       segCount -= (surrEnd - surrStart);
@@ -5167,7 +5226,7 @@ function buildAllSegIndex() {
   allCharsTotal = globalIdx;
 }
 
-// 获取第 idx 个有效码点（全局索引，排除代理对）
+// 获取第 idx 个有效码点（全局索引，排除代理对，可选排除 C0 控制字符）
 function getCPByGlobalIdx(idx) {
   buildAllSegIndex();
   // 二分查找所在段
@@ -5178,7 +5237,9 @@ function getCPByGlobalIdx(idx) {
     else { hi = mid - 1; }
   }
   let cp = allSegFirstCP[segIdx] + (idx - allSegOffsets[segIdx]);
-  // 段 0 中跳过代理对区间
+  // 段 0：补回段首被跳过的 C0 控制字符
+  if (segIdx === 0 && skipC0InAllView) cp += ALL_SKIP_C0;
+  // 段 0：跳过代理对区间
   if (segIdx === 0 && cp >= 0xD800) {
     cp += 0xDFFF - 0xD800 + 1; // 跳过 2048 个代理对码点
   }
@@ -5202,11 +5263,21 @@ function showAllChars() {
   currentChars = [];  // 不预构建数组，按需分页
   currentPage = 0;
   buildAllSegIndex(); // 预计算分段索引（很快，<10ms）
-  setTitle(`🔠 全部字符（共 ${allCharsTotal.toLocaleString()} 个）`);
+  setTitle(`🔠 全部字符（共 ${allCharsTotal.toLocaleString()} 个${skipC0InAllView ? '，已跳过 32 个 C0 控制字符' : ''}）`);
   setActiveNav('all');
   clearControlBar();
   renderGrid();
   document.getElementById('contentScroll').scrollTop = 0;
+}
+
+// 切换「全部字符」是否跳过 C0 控制字符（开关后重建索引并回到第一页）
+function toggleSkipControlChars() {
+  skipC0InAllView = !skipC0InAllView;
+  allSegOffsets = null; allSegFirstCP = null; allSegCounts = null; allCharsTotal = -1;
+  showAllChars();
+  showToast(skipC0InAllView
+    ? '已跳过 C0 控制字符，从 U+0020（空格）开始'
+    : '已包含全部码点，从 U+0000 开始');
 }
 
 // ============================================================
@@ -5272,13 +5343,13 @@ function showBlocks() {
     </div>
 
     <div class="cat-accordion">
-      <div class="cat-acc-header" onclick="toggleCatAccordion(this)">
-        <span class="cat-acc-arrow">▶</span>
+      <div class="cat-acc-header open" onclick="toggleCatAccordion(this)">
+        <span class="cat-acc-arrow">▼</span>
         <span class="cat-acc-icon">🌐</span>
         <span class="cat-acc-title">按平面（17 个）</span>
         <span class="cat-acc-count">按 Unicode 平面分组，平面内点击进入区块列表</span>
       </div>
-      <div class="cat-acc-body">
+      <div class="cat-acc-body open">
         ${planeItemsHTML || '<div style="padding:20px;text-align:center;color:var(--muted)">无数据</div>'}
       </div>
     </div>
@@ -5684,6 +5755,8 @@ function renderFavorites() {
     renderCategoryDetail(catName);
     return;
   }
+  // 离开分类详情时把标签页标题还原成当前页面标题
+  document.title = `${document.getElementById('pageTitle').textContent} - Unicode编码查询`;
 
   // "全部收藏" 下的所有场景都设置 currentChars 为收藏列表
   currentChars = favs;
@@ -5799,7 +5872,7 @@ function renderCategoryList() {
     html += `
       <div class="list-item" style="cursor:pointer" onclick="setFavCategoryMode('category:${encodeURIComponent(name)}');renderFavorites()">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <div class="title">📁 ${name}</div>
+          <div class="title">📁 ${escapeHtml(name)}</div>
           <div style="display:flex;gap:8px;align-items:center">
             <span style="color:var(--muted);font-size:13px">${filtered.length} 个字符</span>
           </div>
@@ -5823,7 +5896,7 @@ function renderCategoryDetail(catName) {
   setCount(`${catName} (${cps.length} 个字符)`);
   
   if (!cps.length) {
-    el.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">分类"${catName}"中没有字符<br><br>点击字符详情中的 📁 按钮添加</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);font-size:16px">分类"${escapeHtml(catName)}"中没有字符<br><br>点击字符详情中的 📁 按钮添加</div>`;
     return;
   }
 
@@ -5851,9 +5924,9 @@ function openManageCategories() {
     for (const name of catNames.sort()) {
       const count = favCategories[name] ? favCategories[name].filter(cp => favorites.has(cp)).length : 0;
       html += `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border)">
-        <span style="flex:1">📁 ${name} <span style="color:var(--muted);font-size:12px">(${count} 个字符)</span></span>
-        <button onclick="manageRenameCategory('${name.replace(/'/g, "\\'")}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text);cursor:pointer;font-size:12px">重命名</button>
-        <button onclick="manageDeleteCategory('${name.replace(/'/g, "\\'")}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:#e74c3c;cursor:pointer;font-size:12px">删除</button>
+        <span style="flex:1">📁 ${escapeHtml(name)} <span style="color:var(--muted);font-size:12px">(${count} 个字符)</span></span>
+        <button onclick="manageRenameCategory('${escapeJsAttr(name)}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text);cursor:pointer;font-size:12px">重命名</button>
+        <button onclick="manageDeleteCategory('${escapeJsAttr(name)}')" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:#e74c3c;cursor:pointer;font-size:12px">删除</button>
       </div>`;
     }
     html += '</div>';
@@ -5911,11 +5984,13 @@ function nextPage() {
 // 搜索页
 // ============================================================
 let searchMode = 'auto'; // auto | code | char | html | css | url | name
+let lastSearchQuery = '';  // 记住上次查询，返回搜索页时预填，避免重新输入
 let recentSearches = [];
 try { recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]'); } catch(e) { recentSearches = []; }
 
 function showSearch() {
   currentView = 'search';
+  currentChars = [];
   setActiveNav('search');
   clearControlBar();
   setTitle('🔍 搜索');
@@ -5928,7 +6003,7 @@ function showSearch() {
       <div class="sp-title">🔍 Unicode 搜索</div>
       <div class="sp-subtitle">支持编码、字符、HTML实体、CSS转义、URL编码、名称搜索</div>
       <div class="sp-box">
-        <input type="text" id="spInput" placeholder="输入要查询的内容，如 U+4E2D、中、&#20013;、\\4E2D、%E4%B8%AD、HEART" autocomplete="off" autofocus>
+        <input type="text" id="spInput" value="${escapeHtml(lastSearchQuery)}" placeholder="输入要查询的内容，如 U+4E2D、中、&#20013;、\\4E2D、%E4%B8%AD、HEART" autocomplete="off" autofocus>
         <button onclick="doSearch()">搜索</button>
       </div>
       <div class="sp-modes">
@@ -5942,8 +6017,9 @@ function showSearch() {
       </div>
       <div class="sp-hint">
         <b>支持的查询格式：</b><br>
-        • <code>U+4E2D</code> / <code>0x4E2D</code> / <code>20013</code> — Unicode 编码（十六进制或十进制）<br>
-        • <code>中</code> / <code>A</code> / <code>😀</code> — 直接输入字符<br>
+        • <code>U+4E2D</code> / <code>0x4E2D</code> / <code>4E2D</code> — Unicode 编码（十六进制；纯数字也按十六进制解释）<br>
+        • <code>1114111</code> — 十六进制越界时自动按十进制解释（此例 = U+10FFFF）<br>
+        • <code>中</code> / <code>A</code> / <code>😀</code> — 直接输入单个字符（优先按字符解释）<br>
         • <code>&amp;#20013;</code> / <code>&amp;#x4E2D;</code> / <code>&amp;amp;</code> — HTML 实体<br>
         • <code>\\4E2D</code> / <code>\\00004E2D</code> — CSS 转义<br>
         • <code>%E4%B8%AD</code> — URL 编码<br>
@@ -5953,7 +6029,7 @@ function showSearch() {
       <div class="sp-recent">
         <h4>📜 最近搜索</h4>
         <div class="sp-recent-list">
-          ${recentSearches.slice(-12).reverse().map(s => `<span class="sp-recent-item" onclick="quickSearch('${escapeHtml(s).replace(/'/g,"\\'")}')">${escapeHtml(s)}</span>`).join('')}
+          ${recentSearches.slice(-12).reverse().map(s => `<span class="sp-recent-item" onclick="quickSearch('${escapeJsAttr(s)}')">${escapeHtml(s)}</span>`).join('')}
         </div>
       </div>` : ''}
     </div>
@@ -5981,10 +6057,16 @@ function setSearchMode(mode) {
       <span class="sp-mode ${searchMode==='name'?'on':''}" onclick="setSearchMode('name')">名称</span>
     `;
   }
+  // 切换识别模式后立即按新规则重解析，避免"点了模式没反应"
+  const inp = document.getElementById('spInput');
+  if (inp && inp.value.trim()) doSearch();
+  else if (inp) inp.focus();
 }
 
 function quickSearch(q) {
-  const input = document.getElementById('spInput');
+  // 总览等页面没有搜索输入框，先切到搜索页再填入
+  let input = document.getElementById('spInput');
+  if (!input) { showSearch(); input = document.getElementById('spInput'); }
   if (input) { input.value = q; doSearch(); }
 }
 
@@ -6001,6 +6083,7 @@ function doSearch() {
   if (!input) return;
   const q = input.value.trim();
   if (!q) return;
+  lastSearchQuery = q;
   addRecentSearch(q);
   addLog('搜索', q);
 
@@ -6020,11 +6103,26 @@ function doSearch() {
     showDetail(result.cp);
   } else if (result.type === 'list') {
     currentChars = result.cps; currentPage = 0;
-    setTitle(`搜索: "${q}"`);
+    // 名称搜索结果被截断时明确告知，避免用户以为"就这么多"
+    setTitle(result.truncated ? `搜索: "${q}"（结果过多，仅显示前 ${result.cps.length} 个）` : `搜索: "${q}"`);
+    if (result.truncated) showToast(`匹配结果过多，仅显示前 ${result.cps.length} 个`);
     setActiveNav(null);
     renderGrid();
+    // emoji 序列：在网格上方显示组合后的完整字符和码点信息
+    if (result.emojiStr) {
+      const hexParts = result.cps.map(cp => 'U+' + cp.toString(16).toUpperCase().padStart(4, '0'));
+      const infoBar = document.createElement('div');
+      infoBar.style.cssText = 'text-align:center;padding:16px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;';
+      infoBar.innerHTML = `
+        <div style="font-size:48px;line-height:1.3;margin-bottom:8px">${escapeHtml(result.emojiStr)}</div>
+        <div style="font-size:13px;color:var(--muted)">Emoji 序列：${result.cps.length} 个码点 ${hexParts.map(h => '<code style="background:var(--bg);padding:2px 6px;border-radius:3px;margin:0 2px;font-size:12px">' + h + '</code>').join(' + ')}</div>
+      `;
+      const content = document.getElementById('content');
+      content.insertBefore(infoBar, content.firstChild);
+    }
     document.getElementById('contentScroll').scrollTop = 0;
   }
+  // emoji 序列也是 list 类型，走上面的分支
 }
 
 function detectSearchMode(q) {
@@ -6034,20 +6132,43 @@ function detectSearchMode(q) {
   if (/^\\[0-9A-Fa-f]{1,6}\s?$/.test(q)) return 'css';
   // URL 编码: %XX
   if (/^%[0-9A-Fa-f]{2}/.test(q)) return 'url';
+  // 单个字符优先按字符解释，否则 "a" 会被当成 U+000A、"1" 被当成 U+0001
+  if ([...q].length === 1) return 'char';
   // Unicode 编码: U+XXXX, 0xXXXX, 纯数字/十六进制
   if (/^(?:[Uu]\+|0[xX])?[0-9A-Fa-f]+$/.test(q) && q.length <= 10) return 'code';
-  // 纯十进制数字也可能是编码
-  if (/^\d{1,8}$/.test(q)) return 'code';
-  // 单个字符
-  if ([...q].length === 1) return 'char';
+  // Emoji 序列（如国旗 🇺🇳、肤色 👍🏽 等多码点字符）
+  if (isEmojiSequence(q)) return 'emoji';
   // 默认按名称搜索
   return 'name';
+}
+
+// 检测是否为多码点 emoji 序列（国旗、肤色修饰、组合 emoji 等）
+function isEmojiSequence(q) {
+  const cps = [...q].map(c => c.codePointAt(0));
+  if (cps.length < 2) return false;
+  const cleanCps = cps.filter(cp => cp !== 0xFE0F && cp !== 0xE0100); // 去除变体选择器
+  if (cleanCps.length < 2) return false;
+  // 区域指示符序列（国旗）
+  if (cleanCps.every(cp => cp >= 0x1F1E6 && cp <= 0x1F1FF)) return true;
+  // 含 emoji 修饰符/ZWJ/变体选择器
+  for (const cp of cps) {
+    if (cp === 0x200D) return true; // ZWJ
+    if (cp >= 0x1F3FB && cp <= 0x1F3FF) return true; // 肤色修饰符
+    if (cp === 0xFE0F || cp === 0xFE0E) return true; // 变体选择器
+  }
+  // 含补充平面字符（通常是 emoji）且非全部相同
+  if (cleanCps.some(cp => cp > 0xFFFF)) {
+    const unique = new Set(cleanCps);
+    if (unique.size > 1) return true;
+  }
+  return false;
 }
 
 function parseSearch(q, mode) {
   switch (mode) {
     case 'code': return parseCode(q);
     case 'char': return parseChar(q);
+    case 'emoji': return parseEmojiSeq(q);
     case 'html': return parseHtmlEntity(q);
     case 'css': return parseCssEscape(q);
     case 'url': return parseUrlEncoding(q);
@@ -6056,15 +6177,23 @@ function parseSearch(q, mode) {
   }
 }
 
+// 解析 emoji 序列：提取所有码点（去除变体选择器），同时返回完整 emoji 字符串
+function parseEmojiSeq(q) {
+  const cps = [...q].map(c => c.codePointAt(0)).filter(cp => cp !== 0xFE0F && cp !== 0xE0100);
+  if (cps.length > 0) return { type: 'list', cps, emojiStr: q.trim() };
+  return null;
+}
+
 function parseCode(q) {
-  let m = q.match(/^(?:[Uu]\+|0[xX])?([0-9A-Fa-f]+)$/);
+  const m = q.match(/^(?:[Uu]\+|0[xX])?([0-9A-Fa-f]+)$/);
   if (m) {
     const cp = parseInt(m[1], 16);
     if (isValidCp(cp)) return { type: 'detail', cp };
-  }
-  if (/^\d+$/.test(q)) {
-    const cp = parseInt(q, 10);
-    if (isValidCp(cp)) return { type: 'detail', cp };
+    // 十六进制越界时（如 1114111）再按十进制解释一次
+    if (/^\d+$/.test(q)) {
+      const dec = parseInt(q, 10);
+      if (isValidCp(dec)) return { type: 'detail', cp: dec };
+    }
   }
   // 支持多个编码（空格或逗号分隔）→ 列表
   const parts = q.split(/[\s,，]+/).filter(Boolean);
@@ -6162,16 +6291,23 @@ function parseName(q) {
   buildNameIndex();
   const qu = q.toUpperCase();
   const results = [];
+  let truncated = false;
   for (const [name, cp] of nameIndex) {
-    if (name.includes(qu)) { results.push(cp); if (results.length >= 500) break; }
+    if (name.includes(qu)) {
+      if (results.length >= NAME_SEARCH_LIMIT) { truncated = true; break; }
+      results.push(cp);
+    }
   }
-  if (results.length) return { type: 'list', cps: results };
+  if (results.length) return { type: 'list', cps: results, truncated };
   return null;
 }
 
 function isValidCp(cp) {
   return cp >= 0 && cp <= 0x10FFFF && !(cp >= 0xD800 && cp <= 0xDFFF);
 }
+
+// 名称搜索结果上限（防止 "LATIN" 这类关键词匹配几万条把页面卡死）
+const NAME_SEARCH_LIMIT = 500;
 
 // 兼容旧代码：searchCode/searchChar 重定向到搜索页
 function searchCode() {
@@ -6251,6 +6387,7 @@ function analyzeChar(ch) {
 // ============================================================
 function showCompare() {
   currentView = 'compare';
+  currentChars = [];
   setActiveNav('compare');
   clearControlBar();
   setTitle('⚖️ 字符对比');
@@ -6263,8 +6400,8 @@ function showCompare() {
       <div class="tp-title">⚖️ 字符对比</div>
       <div class="tp-sub">输入两个字符，对比 Unicode 编码、HTML 实体、CSS 转义、代理对等差异。适用于外观相似的兼容字。</div>
       <div class="tp-row">
-        <input type="text" id="cmpA" placeholder="字符 A (如: 中)" maxlength="4">
-        <input type="text" id="cmpB" placeholder="字符 B (如: 中/兼容字)" maxlength="4">
+        <input type="text" id="cmpA" placeholder="字符 A (如: 中)" maxlength="8">
+        <input type="text" id="cmpB" placeholder="字符 B (如: 中/兼容字)" maxlength="8">
         <button class="tp-btn" onclick="doCompare()">对比</button>
         <button class="tp-btn sec" onclick="document.getElementById('cmpA').value='';document.getElementById('cmpB').value='';document.getElementById('cmpResult').innerHTML='';">清空</button>
       </div>
@@ -6281,8 +6418,15 @@ function doCompare() {
   const b = document.getElementById('cmpB').value.trim();
   const out = document.getElementById('cmpResult');
   if (!a || !b) { out.innerHTML = ''; return; }
-  const ca = [...a][0]; // 仅第一个字符
-  const cb = [...b][0];
+  const aChars = [...a], bChars = [...b];
+  const ca = aChars[0]; // 只对比第一个字符
+  const cb = bChars[0];
+  // 输入了多个字符时明确提示，不再"静默只取第一个"
+  const extraNote = (aChars.length > 1 || bChars.length > 1)
+    ? `<div style="margin:10px 0;padding:8px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6">
+         ℹ️ ${aChars.length > 1 ? `字符 A 输入了 ${aChars.length} 个字符` : ''}${aChars.length > 1 && bChars.length > 1 ? '，' : ''}${bChars.length > 1 ? `字符 B 输入了 ${bChars.length} 个字符` : ''}，这里只对比各自的第一个字符。
+       </div>`
+    : '';
   const da = analyzeChar(ca);
   const db = analyzeChar(cb);
   const eq = da.cp === db.cp;
@@ -6302,6 +6446,7 @@ function doCompare() {
   const surTag = (d) => d.isSurrogatePair ? '<span class="surrogate-tag">代理对</span>' : '';
 
   out.innerHTML = `
+    ${extraNote}
     <div class="compare-result">
       <div class="compare-header">
         <div class="compare-char-cell">
@@ -6339,9 +6484,12 @@ function doCompare() {
 let lastBatchData = [];
 let batchMode = 'encode'; // 'encode' 字符→编码  |  'decode' 编码→字符
 let lastBatchSep = ' ';
+// 单次解析上限：表格是逐字符一行渲染的，粘贴几万字会直接卡死页面，宁可截断并明确告知
+const BATCH_MAX_CHARS = 2000;
 
 function showBatch() {
   currentView = 'batch';
+  currentChars = [];
   setActiveNav('batch');
   clearControlBar();
   setTitle('📊 批量字符解析');
@@ -6442,13 +6590,16 @@ function doBatch(isLive) {
 
   if (batchMode === 'decode') {
     // 反向模式：编码 → 字符
-    const cps = parseCodepoints(text);
+    let cps = parseCodepoints(text);
     if (!cps.length) {
       out.innerHTML = '';
       lastBatchData = [];
       if (status) status.textContent = '⚠ 未识别到有效编码，请检查格式';
       return;
     }
+    const cpsTotal = cps.length;
+    const cutDecode = cpsTotal > BATCH_MAX_CHARS;
+    if (cutDecode) cps = cps.slice(0, BATCH_MAX_CHARS);
     lastBatchData = cps.map(cp => {
       const ch = safeChr(cp);
       return ch ? analyzeChar(ch) : { cp, char: '', display: '∅', name: '无效码点', cpHex: cp.toString(16).toUpperCase().padStart(4,'0'), isSurrogatePair: false, flags: {}, blockCn: '—', categoryCn: '—', category: '—', utf16: '—', utf8: '—', html: '—', htmlHex: '—', css: '—', url: '—' };
@@ -6469,20 +6620,24 @@ function doBatch(isLive) {
     if (status) {
       const t = lastBatchData.length;
       const invalid = lastBatchData.filter(d => d.name === '无效码点').length;
-      status.textContent = `✓ 已解析 ${t} 个编码${invalid ? `（${invalid} 个无效）` : ''}`;
+      status.textContent = `✓ 已解析 ${t} 个编码${invalid ? `（${invalid} 个无效）` : ''}`
+        + (cutDecode ? `　⚠ 共识别到 ${cpsTotal} 个编码，为避免卡顿仅解析前 ${BATCH_MAX_CHARS} 个，可分段粘贴` : '');
     }
     return;
   }
 
   // 正向模式：字符 → 编码
-  const chars = [...text];
+  const allChars = [...text];
+  const cutEncode = allChars.length > BATCH_MAX_CHARS;
+  const chars = cutEncode ? allChars.slice(0, BATCH_MAX_CHARS) : allChars;
   lastBatchData = chars.map(ch => analyzeChar(ch));
   renderBatchResult();
   restoreBatchSep();
   if (status) {
     const t = lastBatchData.length;
     const sur = lastBatchData.filter(d => d.isSurrogatePair).length;
-    status.textContent = `✓ 已解析 ${t} 个字符${sur ? `（含 ${sur} 个代理对）` : ''}`;
+    status.textContent = `✓ 已解析 ${t} 个字符${sur ? `（含 ${sur} 个代理对）` : ''}`
+      + (cutEncode ? `　⚠ 原文共 ${allChars.length} 个字符，为避免卡顿仅解析前 ${BATCH_MAX_CHARS} 个，可分段粘贴` : '');
   }
 }
 
@@ -6517,24 +6672,24 @@ function parseCodepoints(text) {
     }
   }
 
-  // 合并 UTF-16 代理对：如果前一个码点是高位代理且当前是低位代理，合并为补充码点
+  // 合并 UTF-16 代理对：高位代理先暂存，遇到低位代理时合并为补充码点
+  // 注意：不能走 pushCp（它会把 D800-DFFF 直接丢掉，导致配对永远无法发生）
   function pushCpWithSurrogate(cp) {
-    if (cp === null) return;
-    if (cp >= 0xD800 && cp <= 0xDBFF && cps.length > 0) {
-      const prev = cps[cps.length - 1];
-      if (prev >= 0xD800 && prev <= 0xDBFF) {
-        // 前一个是高位代理，当前也是高位代理 → 前一个无效，替换
-        cps[cps.length - 1] = cp;
-        return;
-      }
+    if (cp === null || cp < 0 || cp > 0x10FFFF) return;
+    if (cp >= 0xD800 && cp <= 0xDBFF) {
+      const prev = cps.length ? cps[cps.length - 1] : null;
+      if (prev !== null && prev >= 0xD800 && prev <= 0xDBFF) cps[cps.length - 1] = cp; // 连续高位代理，后者覆盖
+      else cps.push(cp);
+      return;
     }
-    if (cp >= 0xDC00 && cp <= 0xDFFF && cps.length > 0) {
-      const prev = cps[cps.length - 1];
-      if (prev >= 0xD800 && prev <= 0xDBFF) {
+    if (cp >= 0xDC00 && cp <= 0xDFFF) {
+      const prev = cps.length ? cps[cps.length - 1] : null;
+      if (prev !== null && prev >= 0xD800 && prev <= 0xDBFF) {
         // 合并代理对
         cps[cps.length - 1] = (prev - 0xD800) * 0x400 + (cp - 0xDC00) + 0x10000;
         return;
       }
+      return; // 孤立低位代理，丢弃
     }
     pushCp(cp);
   }
@@ -6647,7 +6802,8 @@ function parseCodepoints(text) {
     if (!matched) pos++;
   }
 
-  return cps;
+  // 清理未能配对的孤立代理码点
+  return cps.filter(cp => !(cp >= 0xD800 && cp <= 0xDFFF));
 }
 
 function renderBatchResult() {
@@ -6776,12 +6932,19 @@ function setBatchSep(val) {
   if (!input) return;
   input.value = (val === '\\n') ? '\n' : val;
   lastBatchSep = input.value;
-  // 更新按钮高亮
-  const btns = input.parentElement.querySelectorAll('.sep-btn');
-  const labels = ['/', ',', ' ', '\\n', ''];
-  const actualVal = (val === '\\n') ? '\n' : val;
-  btns.forEach((b, i) => b.classList.toggle('on', labels[i] === actualVal || (labels[i] === '\\n' && actualVal === '\n')));
+  syncSepBtnHighlight();
   updateBatchPreview();
+}
+
+// 同步分隔符预设按钮的高亮（表格重绘后也必须调用，否则高亮会莫名丢失）
+function syncSepBtnHighlight() {
+  const input = document.getElementById('batchSepInput');
+  if (!input || !input.parentElement) return;
+  const labels = ['/', ',', ' ', '\\n', ''];
+  const cur = input.value;
+  input.parentElement.querySelectorAll('.sep-btn').forEach((b, i) => {
+    b.classList.toggle('on', labels[i] === cur || (labels[i] === '\\n' && cur === '\n'));
+  });
 }
 
 function restoreBatchSep() {
@@ -6789,6 +6952,7 @@ function restoreBatchSep() {
   if (input && lastBatchSep !== ' ') {
     input.value = lastBatchSep;
   }
+  syncSepBtnHighlight();
   updateBatchPreview();
 }
 
@@ -6825,12 +6989,18 @@ function copyBatchColumn() {
 // ============================================================
 // 详情弹窗
 // ============================================================
-function showDetail(cp) {
-  addToHistory(cp);
-  const ch = safeChr(cp) || '?';
-  addLog('查看详情', `${ch} (U+${cp.toString(16).toUpperCase().padStart(4,'0')})`);
+// silent=true：同一字符的原地重绘（保存编辑、切换收藏状态），
+// 不重复写浏览记录/操作日志，并保留弹窗滚动位置，避免编辑长释义后被打回顶部
+function showDetail(cp, silent) {
   const info = getCharInfo(cp);
   if (!info) { alert('无效编码点'); return; }
+  const bodyEl = document.getElementById('modalBody');
+  const keepScroll = (silent && detailCP === cp) ? bodyEl.scrollTop : 0;
+  if (!silent) {
+    addToHistory(cp);
+    const ch = safeChr(cp) || '?';
+    addLog('查看详情', `${ch} (U+${cp.toString(16).toUpperCase().padStart(4,'0')})`);
+  }
   const isFav = favorites.has(cp);
   const flags = getCharFlags(cp);
   detailCP = cp;
@@ -6860,19 +7030,19 @@ function showDetail(cp) {
   let dictSection = '';
   if (manageMode) {
     dictSection = `
-      <div class="modal-section"><h3>📖 字典信息 ${customWord ? '<span style="color:#666;font-size:0.7em">(自定义)</span>' : ''}</h3>
+      <div class="modal-section"><h3>📖 字典信息 ${customWord ? '<span style="color:var(--muted);font-size:0.7em">(自定义)</span>' : ''}</h3>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           <div style="flex:1;min-width:120px">
-            <label style="font-size:12px;color:#666">拼音</label>
-            <input type="text" id="wordPinyin_${cp}" value="${escapeHtml(wordInfo?.p || '')}" placeholder="如: zhōng" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:14px">
+            <label style="font-size:12px;color:var(--muted)">拼音</label>
+            <input type="text" id="wordPinyin_${cp}" value="${escapeHtml(wordInfo?.p || '')}" placeholder="如: zhōng" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:4px;font-size:14px;background:var(--bg);color:var(--text)">
           </div>
           <div style="flex:1;min-width:120px">
-            <label style="font-size:12px;color:#666">笔画</label>
-            <input type="text" id="wordStrokes_${cp}" value="${escapeHtml(wordInfo?.s || '')}" placeholder="如: 4" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:14px">
+            <label style="font-size:12px;color:var(--muted)">笔画</label>
+            <input type="text" id="wordStrokes_${cp}" value="${escapeHtml(wordInfo?.s || '')}" placeholder="如: 4" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:4px;font-size:14px;background:var(--bg);color:var(--text)">
           </div>
           <div style="flex:1;min-width:120px">
-            <label style="font-size:12px;color:#666">部首</label>
-            <input type="text" id="wordRadical_${cp}" value="${escapeHtml(wordInfo?.r || '')}" placeholder="如: 丨" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:14px">
+            <label style="font-size:12px;color:var(--muted)">部首</label>
+            <input type="text" id="wordRadical_${cp}" value="${escapeHtml(wordInfo?.r || '')}" placeholder="如: 丨" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:4px;font-size:14px;background:var(--bg);color:var(--text)">
           </div>
         </div>
       </div>
@@ -6894,25 +7064,25 @@ function showDetail(cp) {
   const meaningContent = manageMode ? `
       <div class="modal-row" style="flex-direction:column;align-items:flex-start;gap:8px">
         <div style="width:100%">
-          <textarea id="meaningInput_${cp}" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;resize:vertical;min-height:60px" placeholder="输入字符含义...">${escapeHtml(currentMeaning)}</textarea>
+          <textarea id="meaningInput_${cp}" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:14px;resize:vertical;min-height:60px;background:var(--bg);color:var(--text)" placeholder="输入字符含义...">${escapeHtml(currentMeaning)}</textarea>
         </div>
-        <div style="font-size:12px;color:#666">
-          ${currentMeaning ? `<div>当前含义：${escapeHtml(currentMeaning).replace(/\\n/g, ' ').slice(0, 100)}${currentMeaning.length > 100 ? '...' : ''}</div>` : '<div>暂无含义，可手动添加</div>'}
-          ${isCustomMeaning ? '<div style="color:#666">已保存到本地，优先显示</div>' : ''}
+        <div style="font-size:12px;color:var(--muted)">
+          ${currentMeaning ? `<div>当前含义：${escapeHtml(currentMeaning).replace(/\r?\n/g, ' ').slice(0, 100)}${currentMeaning.length > 100 ? '...' : ''}</div>` : '<div>暂无含义，可手动添加</div>'}
+          ${isCustomMeaning ? '<div style="color:var(--muted)">已保存到本地，优先显示</div>' : ''}
         </div>
       </div>
     ` : `
       <div class="modal-row">
         <span class="label">含义</span>
-        <span class="value" style="text-align:left;word-break:normal;line-height:1.6">${escapeHtml(currentMeaning || '无').replace(/\\n/g, '<br>')}</span>
+        <span class="value" style="text-align:left;word-break:normal;line-height:1.6">${escapeHtml(currentMeaning || '无').replace(/\r?\n/g, '<br>')}</span>
       </div>
-      <div style="font-size:12px;color:#666;padding-top:4px">如需编辑含义，请在设置中开启管理模式</div>
+      <div style="font-size:12px;color:var(--muted);padding-top:4px">如需编辑含义，请在设置中开启管理模式</div>
     `;
 
   const editButtons = manageMode ? `
-      <div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid #eee">
+      <div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-light)">
         <button onclick="saveAllInfo(${cp})" style="padding:6px 16px;background:#666;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px">确认</button>
-        <button onclick="showDetail(${cp})" style="padding:6px 16px;background:#eee;color:#333;border:none;border-radius:4px;cursor:pointer;font-size:14px">取消</button>
+        <button onclick="showDetail(${cp})" style="padding:6px 16px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:14px">取消</button>
       </div>
     ` : '';
 
@@ -6923,10 +7093,10 @@ function showDetail(cp) {
       ${row('字符名称', escapeHtml(info.name))}
       ${row('所属区块', `${info.blockCn} (${info.blockEn})`)}
       ${row('类别', `${info.category} (${info.categoryCn})`)}
-      ${flags.isInvisible ? row('实际字符', `<span style="font-family:monospace;background:#f5f5f5;padding:1px 4px;border-radius:3px">${escapeHtml(info.char === ' ' ? '␣(空格)' : info.char === '' ? '(不可见)' : info.char)}</span>`) : ''}
+      ${flags.isInvisible ? row('实际字符', `<span style="font-family:monospace;background:var(--bg);padding:1px 4px;border-radius:3px">${escapeHtml(info.char === ' ' ? '␣(空格)' : info.char === '' ? '(不可见)' : info.char)}</span>`) : ''}
     </div>
     ${dictSection}
-    <div class="modal-section"><h3>💡 字符含义 ${isCustomMeaning ? '<span style="color:#666;font-size:0.7em">(自定义)</span>' : ''}</h3>
+    <div class="modal-section"><h3>💡 字符含义 ${isCustomMeaning ? '<span style="color:var(--muted);font-size:0.7em">(自定义)</span>' : ''}</h3>
       ${meaningContent}
     </div>
     ${editButtons}
@@ -6936,14 +7106,6 @@ function showDetail(cp) {
       ${row('HTML 实体', info.html)}
       ${row('CSS 转义', info.css)}
       ${row('URL 编码', info.url)}
-    </div>
-    <div class="modal-section"><h3>📊 其他属性</h3>
-      ${row('双向类别', `${info.bidi} (${info.bidiDesc})`)}
-      ${row('组合类', info.combining)}
-      ${row('分解映射', info.decomposition)}
-      ${row('镜像', info.mirrored)}
-      ${row('大写映射', info.upper)}
-      ${row('小写映射', info.lower)}
     </div>
   `;
 
@@ -6991,6 +7153,7 @@ function showDetail(cp) {
   }
 
   document.getElementById('modalOverlay').classList.add('show');
+  bodyEl.scrollTop = keepScroll;
 }
 
 // 切换详情弹窗到前/后字符（dir: -1 上一个, 1 下一个）
@@ -7106,7 +7269,7 @@ function toggleFavModal(cp) {
   }
   saveFavorites();
   updateFavCount();
-  showDetail(cp);       // 只刷新弹窗内部按钮状态
+  showDetail(cp, true);  // 只刷新弹窗内部按钮状态（不重复记历史/日志，保留滚动位置）
   applyFavVisualUpdate(cp); // 页面网格就地更新，不刷新
 }
 function showToast(msg) {
@@ -7345,6 +7508,14 @@ function renderSettingsBody() {
     </div>
 
     <div class="settings-section">
+      <h3>🌗 深色模式</h3>
+      <p>切换明暗主题，选择会被记住（刷新后仍然生效）。手机端侧边栏不显示该开关，可在这里切换。</p>
+      <button class="${document.body.classList.contains('dark') ? '' : 'settings-reset-btn'}" onclick="toggleThemeFromSettings()" style="padding:8px 24px;font-size:16px;${document.body.classList.contains('dark') ? 'background:#4CAF50;color:white;border:none' : ''}">
+        ${document.body.classList.contains('dark') ? '🌙 深色模式（开启）' : '☀️ 深色模式（关闭）'}
+      </button>
+    </div>
+
+    <div class="settings-section">
       <h3>🎨 动画效果</h3>
       <p>开启后界面有过渡动画效果，关闭则响应更快。</p>
       <button class="${!animationEnabled ? 'settings-reset-btn' : ''}" onclick="toggleAnim()" style="padding:8px 24px;font-size:16px;${!animationEnabled ? 'background:#6c757d;color:white;border:none' : ''}">
@@ -7371,8 +7542,8 @@ function renderSettingsBody() {
                 <div style="font-weight:600;font-size:14px">${escapeHtml(f.name)}</div>
                 <div style="font-size:11px;color:var(--muted)">${f.type.split('/').pop().toUpperCase()} · ${formatSize(f.size)} · 安装于 ${new Date(f.addedAt).toLocaleDateString()}</div>
               </div>
-              <span style="font-family:'CustomFont_${f.name}';font-size:20px;min-width:36px;text-align:center">永字 Aa</span>
-              <button class="settings-reset-btn" style="padding:4px 10px;font-size:12px" onclick="removeFont('${f.name.replace(/'/g, "\\'")}')">卸载</button>
+              <span style="font-family:'CustomFont_${f.name.replace(/'/g, '')}';font-size:20px;min-width:36px;text-align:center">永字 Aa</span>
+              <button class="settings-reset-btn" style="padding:4px 10px;font-size:12px" onclick="removeFont('${escapeJsAttr(f.name)}')">卸载</button>
             </div>
           `).join('')
         }
@@ -7383,6 +7554,12 @@ function renderSettingsBody() {
       <h3>👥 Unicode 讨论群聊</h3>
       <p>欢迎加入 Unicode 爱好者 QQ 群，一起交流学习！</p>
       <div class="qq-group-card" style="margin-top:12px">
+        <div class="qq-group-qr">
+          <div id="qqGroupFallback" style="display:none;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:var(--muted);text-align:center;padding:8px;box-sizing:border-box">
+            <span style="font-size:20px">💬</span>
+            <span>二维码生成失败<br>请直接搜索群号</span>
+          </div>
+        </div>
         <div class="qq-group-info" style="flex:1">
           <div class="qq-group-name">🎨 Unicode研究</div>
           <div class="qq-group-id">
@@ -7397,11 +7574,11 @@ function renderSettingsBody() {
       <h3>💬 反馈与联系</h3>
       <p>有任何问题或建议，欢迎通过以下方式联系我：</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
-        <a href="mailto:3772387377@qq.com" style="display:flex;align-items:center;gap:12px;padding:12px;background:#f5f5f5;border-radius:8px;text-decoration:none;color:inherit;transition:background 0.2s">
+        <a href="mailto:3772387377@qq.com" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:8px;text-decoration:none;color:inherit;transition:background 0.2s">
           <span style="font-size:24px">📧</span>
           <div>
             <div style="font-weight:bold">发送邮件</div>
-            <div style="font-size:12px;color:#666">3772387377@qq.com</div>
+            <div style="font-size:12px;color:var(--muted)">3772387377@qq.com</div>
           </div>
         </a>
       </div>
@@ -7460,8 +7637,23 @@ function refreshSettingsDisplay() {
 // ============================================================
 // 主题
 // ============================================================
+// 应用主题（同时同步侧边栏开关与设置面板按钮）
+function applyTheme(dark) {
+  document.body.classList.toggle('dark', !!dark);
+  const sw = document.getElementById('themeSwitch');
+  if (sw) sw.checked = !!dark;
+}
 function toggleTheme() {
-  document.body.classList.toggle('dark', document.getElementById('themeSwitch').checked);
+  const on = document.getElementById('themeSwitch').checked;
+  applyTheme(on);
+  try { localStorage.setItem('unicode_theme', on ? 'dark' : 'light'); } catch(e) {}
+}
+// 设置面板里的主题开关（移动端侧边栏隐藏了开关，这里是唯一入口）
+function toggleThemeFromSettings() {
+  const next = !document.body.classList.contains('dark');
+  applyTheme(next);
+  try { localStorage.setItem('unicode_theme', next ? 'dark' : 'light'); } catch(e) {}
+  refreshSettingsDisplay();
 }
 
 // 复制 QQ 群号
@@ -7600,7 +7792,10 @@ function setClickFavMode(on) {
     } else {
       cell.setAttribute('onclick', `showDetail(${cp})`);
       cell.classList.remove('cell-favmode');
-      cell.removeAttribute('title');
+      // 还原为"字符名称"提示，而不是留一个空 title
+      const nm = cell.getAttribute('data-name'), hx = cell.getAttribute('data-hex');
+      if (nm && hx) cell.setAttribute('title', `${nm} (U+${hx})`);
+      else cell.removeAttribute('title');
     }
   });
   // 同步所有控制栏按钮视觉 + onclick（关键：不更新 onclick 会导致开关永远朝同一方向拨）
@@ -7614,31 +7809,28 @@ function setClickFavMode(on) {
   showToast(clickFavMode ? '已开启点击收藏：点字符直接收藏/取消' : '已关闭点击收藏：点字符查看详情');
 }
 
-function toggleFavorite(cp) {
-  const ch = safeChr(cp) || '?';
-  if (favorites.has(cp)) {
-    favorites.delete(cp);
-    showToast('已取消收藏');
-    addLog('取消收藏', `${ch} (U+${cp.toString(16).toUpperCase().padStart(4,'0')})`);
-  } else {
-    favorites.add(cp);
-    showToast('已加入收藏');
-    addLog('加入收藏', `${ch} (U+${cp.toString(16).toUpperCase().padStart(4,'0')})`);
-  }
-  saveFavorites();
-  updateFavCount();
-  if (currentView === 'overview') { showOverview(); } // 总览页是统计面板，无网格可就地更新
-  else { applyFavVisualUpdate(cp); } // 其余视图就地更新，不刷新
-}
-
 // ============================================================
 // 初始化
 // ============================================================
 showOverview();
 updateFavCount();
 applyAnimSetting();
+// 恢复上次的主题选择（此前每次刷新都会回到浅色）
+applyTheme(localStorage.getItem('unicode_theme') === 'dark');
 // 键盘左右箭头：在详情弹窗中切换前/后字符
 document.addEventListener('keydown', (e) => {
+  // 放大预览位于详情之上：优先处理它，且不把按键穿透给下层详情
+  const zoom = document.getElementById('zoomOverlay');
+  if (zoom.classList.contains('show')) {
+    if (e.key === 'Escape') { e.preventDefault(); closeZoomPreview(); }
+    return;
+  }
+  // 设置面板
+  const settings = document.getElementById('settingsOverlay');
+  if (settings.classList.contains('show')) {
+    if (e.key === 'Escape') { e.preventDefault(); closeSettings(); }
+    return;
+  }
   const overlay = document.getElementById('modalOverlay');
   if (!overlay.classList.contains('show')) return;
   // 忽略输入框中的按键
@@ -7682,9 +7874,12 @@ const QR = (() => {
 
   // Number of EC blocks: [L, M, Q, H] for version 1-40
   const EC_BLOCKS = {
-    1:[1,1,1,1], 2:[1,1,1,1], 3:[1,1,1,1], 4:[1,1,1,1],
-    5:[1,1,1,1], 6:[2,1,2,2], 7:[2,2,2,2], 8:[2,2,2,2],
-    9:[2,2,2,2], 10:[2,4,4,4], 11:[2,4,4,4], 12:[2,4,4,4],
+    // v1–v9 已由“总码字数 = 数据码字 + 每块纠错×块数”验证并与标准纠错块数一致
+    1:[1,1,1,1], 2:[1,1,1,1], 3:[1,1,2,2], 4:[1,2,2,4],
+    5:[1,2,4,4], 6:[2,4,4,4], 7:[2,4,6,5], 8:[2,4,6,6],
+    9:[2,5,8,8],
+    // ⚠ v10 及以后这几组数值无法用离线手段核实为规范值，generate() 会做自洽校验并拒绝不可靠的组合
+    10:[2,4,4,4], 11:[2,4,4,4], 12:[2,4,4,4],
     13:[4,4,4,4], 14:[4,4,4,4], 15:[4,4,6,6], 16:[4,6,6,6],
     17:[4,6,6,6], 18:[4,6,6,6], 19:[6,6,6,6], 20:[6,6,6,6],
     21:[6,6,6,6], 22:[6,6,6,6], 23:[6,6,6,6], 24:[6,6,6,6],
@@ -7707,57 +7902,24 @@ const QR = (() => {
     35:[6,30,54,78,102,126], 36:[6,24,50,76,102,128], 37:[6,28,54,80,106,132],
     38:[6,32,58,84,110,136], 39:[6,26,54,82,110,138], 40:[6,30,58,86,114,142]
   };
+  // 上表原缺每个版本的最后一个坐标（规范中恒为 边长-7），缺了会让定位图案位置错甚至完全缺失
+  for (const _k of Object.keys(ALIGNMENT_POS)) {
+    const _v = Number(_k);
+    if (_v === 1) continue;
+    const _last = 17 + _v * 4 - 7;
+    const _arr = ALIGNMENT_POS[_v];
+    if (_arr[_arr.length - 1] !== _last) _arr.push(_last);
+  }
 
-  // Multi-dimensional alignment positions (versions with multiple alignment patterns need a grid)
-  // Each entry is an array of [row, col] pairs for alignment pattern centers
-  const ALIGNMENT_POS_MULTI = {
-    1:[[6,6]],
-    2:[[6,18],[18,6]],
-    3:[[6,22],[22,6]],
-    4:[[6,26],[26,6]],
-    5:[[6,30],[30,6]],
-    6:[[6,34],[34,6]],
-    7:[[6,22],[22,6],[22,22]],
-    8:[[6,24],[24,6],[24,24]],
-    9:[[6,26],[26,6],[26,26]],
-    10:[[6,28],[28,6],[28,28]],
-    11:[[6,30],[30,6],[30,30]],
-    12:[[6,32],[32,6],[32,32]],
-    13:[[6,34],[34,6],[34,34]],
-    14:[[6,26],[26,6],[26,26],[6,46],[46,6],[46,46],[26,46],[46,26]],
-    15:[[6,26],[26,6],[26,26],[6,48],[48,6],[48,48],[26,48],[48,26]],
-    16:[[6,26],[26,6],[26,26],[6,50],[50,6],[50,50],[26,50],[50,26]],
-    17:[[6,30],[30,6],[30,30],[6,54],[54,6],[54,54],[30,54],[54,30]],
-    18:[[6,30],[30,6],[30,30],[6,56],[56,6],[56,56],[30,56],[56,30]],
-    19:[[6,30],[30,6],[30,30],[6,58],[58,6],[58,58],[30,58],[58,30]],
-    20:[[6,34],[34,6],[34,34],[6,62],[62,6],[62,62],[34,62],[62,34]],
-    21:[[6,28],[28,6],[28,28],[50,6],[50,28],[50,50],[6,50],[28,50]],
-    22:[[6,26],[26,6],[26,26],[50,6],[50,26],[50,50],[6,50],[26,50]],
-    23:[[6,30],[30,6],[30,30],[54,6],[54,30],[54,54],[6,54],[30,54]],
-    24:[[6,28],[28,6],[28,28],[54,6],[54,28],[54,54],[6,54],[28,54]],
-    25:[[6,32],[32,6],[32,32],[58,6],[58,32],[58,58],[6,58],[32,58]],
-    26:[[6,30],[30,6],[30,30],[58,6],[58,30],[58,58],[6,58],[30,58]],
-    27:[[6,34],[34,6],[34,34],[62,6],[62,34],[62,62],[6,62],[34,62]],
-    28:[[6,26],[26,6],[26,26],[50,6],[50,26],[50,50],[74,6],[74,26],[74,50],[98,6],[98,26],[98,50],[6,74],[26,74],[50,74],[74,74]],
-    29:[[6,30],[30,6],[30,30],[54,6],[54,30],[54,54],[78,6],[78,30],[78,54],[102,6],[102,30],[102,54],[6,78],[30,78],[54,78],[78,78]],
-    30:[[6,26],[26,6],[26,26],[52,6],[52,26],[52,52],[78,6],[78,26],[78,52],[104,6],[104,26],[104,52],[6,78],[26,78],[52,78],[78,78]],
-    31:[[6,30],[30,6],[30,30],[56,6],[56,30],[56,56],[82,6],[82,30],[82,56],[108,6],[108,30],[108,56],[6,82],[30,82],[56,82],[82,82]],
-    32:[[6,34],[34,6],[34,34],[60,6],[60,34],[60,60],[86,6],[86,34],[86,60],[112,6],[112,34],[112,60],[6,86],[34,86],[60,86],[86,86]],
-    33:[[6,30],[30,6],[30,30],[58,6],[58,30],[58,58],[86,6],[86,30],[86,58],[114,6],[114,30],[114,58],[6,86],[30,86],[58,86],[86,86]],
-    34:[[6,34],[34,6],[34,34],[62,6],[62,34],[62,62],[90,6],[90,34],[90,62],[118,6],[118,34],[118,62],[6,90],[34,90],[62,90],[90,90]],
-    35:[[6,30],[30,6],[30,30],[54,6],[54,30],[54,54],[78,6],[78,30],[78,54],[102,6],[102,30],[102,54],[126,6],[126,30],[126,54],[6,78],[30,78],[54,78],[78,78]],
-    36:[[6,24],[24,6],[24,24],[50,6],[50,24],[50,50],[76,6],[76,24],[76,50],[102,6],[102,24],[102,50],[128,6],[128,24],[128,50],[6,76],[24,76],[50,76],[76,76]],
-    37:[[6,28],[28,6],[28,28],[54,6],[54,28],[54,54],[80,6],[80,28],[80,54],[106,6],[106,28],[106,54],[132,6],[132,28],[132,54],[6,80],[28,80],[54,80],[80,80]],
-    38:[[6,32],[32,6],[32,32],[58,6],[58,32],[58,58],[84,6],[84,32],[84,58],[110,6],[110,32],[110,58],[136,6],[136,32],[136,58],[6,84],[32,84],[58,84],[84,84]],
-    39:[[6,26],[26,6],[26,26],[54,6],[54,26],[54,54],[82,6],[82,26],[82,54],[110,6],[110,26],[110,54],[138,6],[138,26],[138,54],[6,82],[26,82],[54,82],[82,82]],
-    40:[[6,30],[30,6],[30,30],[58,6],[58,30],[58,58],[86,6],[86,30],[86,58],[114,6],[114,30],[114,58],[142,6],[142,30],[142,58],[6,86],[30,86],[58,86],[86,86]]
-  };
+  // 定位图案（alignment pattern）的 [行,列] 组合在 generate() 里由上面两组中心坐标做笛卡尔积生成，
+  // 再剔除与三个定位图案重叠的三组。旧版此处有一张手写的 ALIGNMENT_POS_MULTI 表，
+  // 数据不全（version ≥ 2 基本都缺项）且与定位图案的保留逻辑冲突，已删除。
 
   // Version info for versions 7-40 (just the first 3 for each)
   const VERSION_INFO = [
     0x07C94,0x085BC,0x09A99,0x0A4D3,0x0BBF6,0x0C762,0x0D847,0x0E60D,0x0F928,0x10B78,
     0x1145D,0x12A17,0x13532,0x149A6,0x15683,0x168C9,0x177EC,0x18EC4,0x191E1,0x1AFAB,
-    0x1B08E,0x1CC1A,0x1D33F,0x1ED75,0x1F250,0x209D5,0x216F0,0x228BA,0x2376D,0x24B50,
+    0x1B08E,0x1CC1A,0x1D33F,0x1ED75,0x1F250,0x209D5,0x216F0,0x228BA,0x2379F,0x24B0B,
     0x2542E,0x26A64,0x27541,0x28C69
   ];
 
@@ -7767,12 +7929,11 @@ const QR = (() => {
     // L(0): mask 0-7
     0x77C4,0x72F3,0x7DAA,0x789D,0x662F,0x6318,0x6C41,0x6976,
     // M(1): mask 0-7
-    0x5545,0x5072,0x5FDD,0x5AE8,0x45F9,0x40CE,0x4F97,0x4AA2,
+    0x5412,0x5125,0x5E7C,0x5B4B,0x45F9,0x40CE,0x4F97,0x4AA0,
     // Q(2): mask 0-7
-    0x3554,0x3067,0x3F32,0x3A65,0x24B4,0x2183,0x2EDA,0x2BED,
+    0x355F,0x3068,0x3F31,0x3A06,0x24B4,0x2183,0x2EDA,0x2BED,
     // H(3): mask 0-7
-    0x1585,0x10B6,0x1F01,0x1A76,0x0A40,0x0F77,0x0AA2,0x05D5,
-    0x0000
+    0x1689,0x13BE,0x1CE7,0x19D0,0x0762,0x0255,0x0D0C,0x083B,
   ];
 
   // Galois field
@@ -7796,7 +7957,8 @@ const QR = (() => {
       const next = new Array(gen.length + 1).fill(0);
       next[0] = gen[0];
       for (let j = 1; j < gen.length; j++) {
-        next[j] = gen[j-1] ^ (gen[j] !== 0 ? gexp(glog(gen[j]) + i) : 0);
+        // 第 j 项 = gen[j] + gen[j-1]·α^i（下标不可互换，否则生成多项式是错的）
+        next[j] = gen[j] ^ (gen[j-1] !== 0 ? gexp(glog(gen[j-1]) + i) : 0);
       }
       next[gen.length] = (gen[gen.length-1] !== 0 ? gexp(glog(gen[gen.length-1]) + i) : 0);
       gen = next;
@@ -7822,15 +7984,21 @@ const QR = (() => {
     L:[19,34,55,80,108,136,156,194,232,274,324,370,428,456,516,612,672,716,784,868,920,1008,1064,1132,1196,1268,1370,1459,1531,1631,1735,1843,1955,2071,2191,2306,2434,2566,2702,2812],
     M:[16,28,44,64,86,108,124,154,182,216,254,290,334,364,434,538,606,652,724,816,869,960,1028,1105,1161,1225,1322,1408,1488,1607,1709,1820,1935,2055,2180,2313,2441,2576,2719,2860],
     Q:[13,22,34,48,62,76,88,110,132,153,180,205,243,266,319,385,453,513,576,646,720,794,866,945,1008,1096,1176,1250,1328,1436,1545,1659,1778,1902,2030,2164,2305,2452,2606,2768],
-    H:[9,16,26,36,46,56,66,86,100,121,137,158,185,209,236,289,327,369,399,447,487,514,570,616,666,720,756,810,873,913,987,1035,1117,1202,1282,1369,1461,1558,1661,1771]
+    H:[9,16,26,36,46,60,66,86,100,121,137,158,185,209,236,289,327,369,399,447,487,514,570,616,666,720,756,810,873,913,987,1035,1117,1202,1282,1369,1461,1558,1661,1771]
   };
-  // Net data capacity (user data bytes, after mode+count overhead)
-  const NET_DATA_CW = {
-    L:[14,26,42,62,84,106,122,152,180,213,251,287,331,362,430,537,605,651,723,815,869,960,1028,1105,1161,1225,1322,1408,1488,1607,1709,1820,1935,2055,2180,2313,2441,2576,2719,2860],
-    M:[14,26,42,62,84,106,122,152,180,213,251,287,331,362,430,537,605,651,723,815,869,960,1028,1105,1161,1225,1322,1408,1488,1607,1709,1820,1935,2055,2180,2313,2441,2576,2719,2860],
-    Q:[11,20,32,46,60,74,86,108,130,151,178,203,241,264,317,383,451,511,574,644,718,792,864,943,1006,1094,1174,1248,1326,1434,1543,1657,1776,1900,2028,2162,2303,2450,2604,2766],
-    H:[7,14,24,34,44,54,64,84,98,119,135,156,183,207,234,287,325,367,397,445,485,512,568,614,664,718,754,808,871,911,985,1033,1115,1200,1280,1367,1459,1556,1659,1769]
-  };
+  // 每个版本的总码字数（＝数据码字 + 纠错码字）。由 ISO/IEC 18004 的功能图形布局逐模块推导得出，
+  // 推导结果与公开标准序列 40/40 完全一致；generate() 用它校验上面几张表是否自洽。
+  const TOTAL_CW = [26,44,70,100,134,172,196,242,292,346,404,466,532,581,655,733,815,901,991,1085,
+    1156,1258,1364,1474,1588,1706,1828,1921,2051,2185,2323,2465,2611,2761,2876,3034,3196,3362,3532,3706];
+  // 净数据容量（可编码的用户字节数）：由总数据码字数精确推导，避免手写表在版本边界处高估导致数据被静默截断
+  // 位开销 = 4 位模式指示 + 计数指示（v<10 为 8 位，v≥10 为 16 位）
+  const NET_DATA_CW = {};
+  for (const _lv of ['L','M','Q','H']) {
+    NET_DATA_CW[_lv] = TOTAL_DATA_CW[_lv].map((total, i) => {
+      const cntBits = (i + 1) < 10 ? 8 : 16;
+      return Math.max(0, Math.floor((total * 8 - 4 - cntBits) / 8));
+    });
+  }
 
   function getVersionData(version, eccIdx) {
     const ecc = ECC_PER_BLOCK[version][eccIdx];
@@ -7955,7 +8123,8 @@ const QR = (() => {
 
   // Main generator
   function generate(text, eccIdx) {
-    eccIdx = eccIdx || 1; // Default M
+    // 注意：不能用 `eccIdx || 1`，L 级的索引是 0，会被误判为未传参而强制变成 M 级
+    if (eccIdx === undefined || eccIdx === null) eccIdx = 1; // 默认 M
     // Encode text as UTF-8
     const bytes = [];
     for (let i = 0; i < text.length; i++) {
@@ -7971,6 +8140,11 @@ const QR = (() => {
     if (!found) throw new Error('Data too long for QR code');
     const version = found.version;
     const info = found.info;
+    // 结构校验：数据码字 + 每块纠错×块数 必须等于该版本总码字数。
+    // 不符合说明纠错块结构表不可靠，硬生成出来的码交错方式不合规范、扫描器必然读不出——宁可直接报错。
+    if (info.dataCW + info.ecc * info.blocks !== TOTAL_CW[version - 1]) {
+      throw new Error(`版本 ${version} 的纠错块结构不可靠（${info.dataCW} + ${info.ecc}×${info.blocks} ≠ ${TOTAL_CW[version - 1]}），已拒绝生成`);
+    }
     const size = info.size;
 
     // Build matrix
@@ -8016,17 +8190,20 @@ const QR = (() => {
       reserved[i][6] = true;
     }
 
-    // Alignment patterns (skip version 1 - finders cover all corners)
+    // 定位图案（对齐图案）：版本 2 起，取两组中心坐标的笛卡尔积，剔除与三个定位图案重叠的三组
+    // 注意：画完必须同时标记 reserved，否则这些模块会被后面的数据位覆盖掉（原实现漏了这一步）
     if (version >= 2) {
-      const centers = ALIGNMENT_POS_MULTI[version];
-      for (const [r, c] of centers) {
-        // Skip if too close to finder patterns or timing patterns
-        if (r <= 8 && c <= 8) continue;
-        if (r <= 8 && c >= size - 9) continue;
-        if (r >= size - 9 && c <= 8) continue;
-        // Skip if overlapping timing pattern row/col
-        if (r === 6 || c === 6) continue;
-        if (!reserved[r][c]) placeAlignment(matrix, r, c);
+      const centers = ALIGNMENT_POS[version];
+      for (const r of centers) {
+        for (const c of centers) {
+          if (r <= 8 && c <= 8) continue;          // 与左上定位图案重叠
+          if (r <= 8 && c >= size - 9) continue;   // 与右上定位图案重叠
+          if (r >= size - 9 && c <= 8) continue;   // 与左下定位图案重叠
+          placeAlignment(matrix, r, c);
+          for (let dr = -2; dr <= 2; dr++) {
+            for (let dc = -2; dc <= 2; dc++) reserved[r + dr][c + dc] = true;
+          }
+        }
       }
     }
 
