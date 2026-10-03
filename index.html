@@ -2907,7 +2907,7 @@ const WORD_DICT = (function () {
 
 
 // ===== 应用版本 =====
-const APP_VERSION = '0.0.1';
+const APP_VERSION = '0.0.2';
 const APP_UNICODE_VERSION = '17.0';   // 内置区块数据版本
 
 const PAGE_SIZE = 96;
@@ -3294,6 +3294,9 @@ async function loadStoredUnicodeData() {
       blocks: stored.blocks || null,
       charMap: new Map(stored.charMapData),
       loaded: true,
+      scripts: stored.scriptsData ? new Map(stored.scriptsData) : new Map(),
+      scriptExts: stored.scriptExtData ? new Map(stored.scriptExtData.map(([cp, arr]) => [cp, arr])) : new Map(),
+      lineBreak: stored.lineBreakData ? new Map(stored.lineBreakData) : new Map(),
     };
   }
   updateVersionDisplay();
@@ -3474,6 +3477,83 @@ async function uploadBlocksFile(event) {
     refreshSettingsDisplay();
     showToast('Blocks.txt 已加载');
     addLog('上传数据', `Blocks.txt`);
+  } catch(e) {
+    prog.className = 'update-progress error';
+    prog.textContent = `❌ 解析失败: ${e.message}`;
+  }
+  event.target.value = '';
+}
+
+// --- 上传 Scripts.txt（sc / scx 属性） ---
+async function uploadScriptsFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const prog = document.getElementById('fileProgress');
+  prog.style.display = 'block';
+  prog.className = 'update-progress';
+  prog.textContent = `正在解析 ${file.name} ...`;
+  try {
+    const text = await file.text();
+    const { map, ext } = parseUCDScalar(text);
+    unicodeData = {
+      version: unicodeData.version, source: unicodeData.source,
+      blocks: unicodeData.blocks, charMap: unicodeData.charMap, loaded: unicodeData.loaded,
+      scripts: map, scriptExts: ext,
+      lineBreak: unicodeData.lineBreak || new Map(),
+    };
+    const existingLB = unicodeData.lineBreak || new Map();
+    await idbSet('unicodeData', {
+      version: unicodeData.version, source: unicodeData.source,
+      blocks: unicodeData.blocks || null,
+      charMapData: unicodeData.charMap ? [...unicodeData.charMap.entries()] : [],
+      scriptsData: [...map.entries()],
+      scriptExtData: [...ext.entries()].map(([cp, arr]) => [cp, arr]),
+      lineBreakData: [...existingLB.entries()],
+      timestamp: Date.now(),
+    });
+    prog.className = 'update-progress success';
+    prog.textContent = `✅ 已加载 Scripts.txt：${map.size} 个码点。`;
+    refreshSettingsDisplay();
+    showToast('Scripts.txt 已加载');
+    addLog('上传数据', `Scripts.txt: ${map.size} 个码点`);
+  } catch(e) {
+    prog.className = 'update-progress error';
+    prog.textContent = `❌ 解析失败: ${e.message}`;
+  }
+  event.target.value = '';
+}
+
+// --- 上传 LineBreak.txt（lb 属性） ---
+async function uploadLineBreakFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const prog = document.getElementById('fileProgress');
+  prog.style.display = 'block';
+  prog.className = 'update-progress';
+  prog.textContent = `正在解析 ${file.name} ...`;
+  try {
+    const text = await file.text();
+    const { map } = parseUCDScalar(text);
+    unicodeData = {
+      version: unicodeData.version, source: unicodeData.source,
+      blocks: unicodeData.blocks, charMap: unicodeData.charMap, loaded: unicodeData.loaded,
+      scripts: unicodeData.scripts || new Map(), scriptExts: unicodeData.scriptExts || new Map(),
+      lineBreak: map,
+    };
+    await idbSet('unicodeData', {
+      version: unicodeData.version, source: unicodeData.source,
+      blocks: unicodeData.blocks || null,
+      charMapData: unicodeData.charMap ? [...unicodeData.charMap.entries()] : [],
+      scriptsData: unicodeData.scripts ? [...unicodeData.scripts.entries()] : [],
+      scriptExtData: unicodeData.scriptExts ? [...unicodeData.scriptExts.entries()].map(([cp, arr]) => [cp, arr]) : [],
+      lineBreakData: [...map.entries()],
+      timestamp: Date.now(),
+    });
+    prog.className = 'update-progress success';
+    prog.textContent = `✅ 已加载 LineBreak.txt：${map.size} 个码点。`;
+    refreshSettingsDisplay();
+    showToast('LineBreak.txt 已加载');
+    addLog('上传数据', `LineBreak.txt: ${map.size} 个码点`);
   } catch(e) {
     prog.className = 'update-progress error';
     prog.textContent = `❌ 解析失败: ${e.message}`;
@@ -3712,6 +3792,7 @@ function parseUCD(text) {
     const mirrored = f[9] || 'N';
     const upper = f[12] || '';
     const lower = f[13] || '';
+    const title = f[14] || '';
 
     // 范围起始
     if (name.endsWith(', First>')) {
@@ -3732,7 +3813,7 @@ function parseUCD(text) {
           bidi: rangeBidi || 'L',
           decomposition: '',
           mirrored: 'N',
-          upper: '', lower: '',
+          upper: '', lower: '', title: '',
         });
       }
       rangeStart = null;
@@ -3748,10 +3829,71 @@ function parseUCD(text) {
       mirrored: mirrored,
       upper: upper,
       lower: lower,
+      title: title,
     });
   }
   return charMap;
 }
+
+// 解析 Scripts.txt / LineBreak.txt（UCD 格式：code 或 code..code ; value # 注释）
+// 同一码点出现多行时（Script Extensions），首次出现的值作为主值（sc），全部值构成扩展集合（scx）
+function parseUCDScalar(text) {
+  const map = new Map();
+  const ext = new Map();
+  for (const line of text.split('\n')) {
+    const hash = line.indexOf('#');
+    const body = hash !== -1 ? line.slice(0, hash) : line;
+    if (!body.trim()) continue;
+    const f = body.split(';');
+    if (f.length < 2) continue;
+    const val = f[1].trim();
+    if (!val) continue;
+    const rng = f[0].trim().split('..');
+    const a = parseInt(rng[0], 16);
+    const b = rng.length > 1 ? parseInt(rng[1], 16) : a;
+    if (isNaN(a) || isNaN(b)) continue;
+    for (let c = a; c <= b; c++) {
+      if (!map.has(c)) map.set(c, val);
+      if (!ext.has(c)) ext.set(c, []);
+      const arr = ext.get(c);
+      if (!arr.includes(val)) arr.push(val);
+    }
+  }
+  return { map, ext };
+}
+
+// 常见文字系统（Script）中文名
+const SC_NAMES = {
+  Common: '通用', Inherited: '继承', Latin: '拉丁文', Greek: '希腊文', Cyrillic: '西里尔文',
+  Armenian: '亚美尼亚文', Hebrew: '希伯来文', Arabic: '阿拉伯文', Syriac: '叙利亚文', Thaana: '塔纳文',
+  Devanagari: '天城文', Bengali: '孟加拉文', Gurmukhi: '古木基文', Gujarati: '古吉拉特文',
+  Oriya: '奥里亚文', Tamil: '泰米尔文', Telugu: '泰卢固文', Kannada: '卡纳达文', Malayalam: '马拉雅拉姆文',
+  Sinhala: '僧伽罗文', Thai: '泰文', Lao: '老挝文', Tibetan: '藏文', Myanmar: '缅甸文',
+  Georgian: '格鲁吉亚文', Hangul: '谚文（韩文）', Ethiopic: '吉兹文', Cherokee: '切罗基文',
+  'Han': '汉字', Hiragana: '平假名', Katakana: '片假名', Bopomofo: '注音符号',
+  'Mongolian': '蒙古文', Khmer: '高棉文', Runic: '卢恩文', Gothic: '哥特文', Deseret: '德塞雷特文',
+  'Hanunoo': '哈努诺文', 'Buhid': '布希德文', 'Tagalog': '他加禄文', 'Tagbanwa': '塔格巴努阿文',
+};
+
+// 常见断行类别（Line Break）中文说明
+const LB_DESC = {
+  XX: '未知', AI: '歧义（不换行）', AL: '普通字母', B2: '双机会破发点', BA: '破发后',
+  BB: '破发前', BK: '必须换行', CB: '条件破发点', CL: '后闭括号', CM: '随附标记',
+  CP: '后闭括号（带括号）', CR: '回车', EB: '表意（Emoji 基字符）', EM: 'Emoji 修饰符',
+  EX: '感叹/问号', GL: '粘连（不许断）', HY: '连字符', ID: '表意字符（可自由换行）',
+  IN: '不可分隔', IS: '中点类符号', LF: '换行', NL: '下一行', NS: '禁断起始',
+  NU: '数字', OP: '前开括号', PO: '后缀数字符号', PR: '前缀数字符号', QU: '引号',
+  SA: '南亚复杂上下文', SG: '代理对', SP: '空格', SY: '数学符号', WJ: '禁断换行',
+  ZW: '零宽空格', ZWJ: '零宽连接符',
+};
+
+// 分解映射标签中文说明
+const DECOMP_TAGS = {
+  compat: '兼容分解', super: '上标形式', sub: '下标形式', fraction: '分数形式',
+  initial: '词首形式', medial: '词中形式', final: '词尾形式', isolated: '孤立形式',
+  circle: '圆圈形式', wide: '全角形式', narrow: '半角形式', small: '小型形式',
+  vertical: '竖排形式', square: '方形形式', font: '字形变体', noBreak: '不换行形式',
+};
 
 // 为范围字符生成名称
 function generateRangeName(rangeType, cp) {
@@ -3912,6 +4054,34 @@ function getCharInfo(cp) {
     upperMap = ch.toUpperCase() !== ch ? `${ch.toUpperCase()} (U+${ch.toUpperCase().codePointAt(0).toString(16).toUpperCase()})` : '无';
   }
 
+  // 标题映射（UnicodeData.txt 第 15 列，上传数据后可用；无数据时用 JS 内置回退）
+  let titleMap = '无';
+  let titleRaw = '';
+  if (unicodeData.charMap && unicodeData.charMap.has(cp)) {
+    titleRaw = unicodeData.charMap.get(cp).title || '';
+  }
+  if (titleRaw) {
+    const tcp = parseInt(titleRaw, 16);
+    const tch = safeChr(tcp);
+    titleMap = tch ? `${tch} (U+${titleRaw.toUpperCase()})` : `U+${titleRaw.toUpperCase()}`;
+  } else if (!(unicodeData.charMap && unicodeData.charMap.has(cp))) {
+    const tUp = ch.toLowerCase().replace(/(^|[\s\u002D])\p{L}/gu, m => m.toUpperCase());
+    if (tUp !== ch) titleMap = `${tUp} (JS 内置推导)`;
+  }
+
+  // 文字系统（sc）、文字扩展（scx）、断行类别（lb）：来自上传的 Scripts.txt / LineBreak.txt
+  let script = '', scriptCn = '', scriptExts = '', lineBreak = '', lineBreakDesc = '';
+  if (unicodeData.scripts && unicodeData.scripts.has(cp)) {
+    script = unicodeData.scripts.get(cp);
+    scriptCn = SC_NAMES[script] || '';
+    const exts = unicodeData.scriptExts && unicodeData.scriptExts.get(cp);
+    if (exts && exts.length > 1) scriptExts = exts.join(', ');
+  }
+  if (unicodeData.lineBreak && unicodeData.lineBreak.has(cp)) {
+    lineBreak = unicodeData.lineBreak.get(cp);
+    lineBreakDesc = LB_DESC[lineBreak] || '';
+  }
+
   return {
     char: ch, codepoint: cp,
     name: getCharName(cp) || `U+${cp.toString(16).toUpperCase().padStart(4,'0')}`,
@@ -3919,7 +4089,8 @@ function getCharInfo(cp) {
     utf8: toUTF8(cp), utf16: toUTF16(cp), html: toHTML(cp), css: toCSS(cp), url: toURL(cp),
     decimal: cp, bidi, bidiDesc, combining,
     eastAsianWidth: 'N', eastAsianWidthDesc: '中性',
-    mirrored, decomposition, lower: lowerMap, upper: upperMap,
+    mirrored, decomposition, lower: lowerMap, upper: upperMap, title: titleMap,
+    script, scriptCn, scriptExts, lineBreak, lineBreakDesc,
     meaning: getCharMeaning(cp),
   };
 }
@@ -4364,19 +4535,11 @@ function jumpToUnicode(raw) {
   const cp = parseInt(codeStr, 16);
   if (!Number.isFinite(cp) || cp < 0 || cp > 0x10FFFF) { showToast('无效编码'); return; }
   if (cp >= 0xD800 && cp <= 0xDFFF) { showToast('代理码点不可用'); return; }
-  // 被「跳过控制字符」排除的码点不在顺序里，直接说明
-  if (skipC0InAllView && cp < ALL_SKIP_C0) {
-    showToast(`U+${cp.toString(16).toUpperCase().padStart(4,'0')} 是 C0 控制字符，已被「跳过控制字符」排除；可关闭该开关，或在搜索中查看`);
-    return;
-  }
   buildAllSegIndex();
-  // 计算全局索引（排除代理对区间；跳过控制字符时再减去段首偏移）
+  // 计算全局索引（排除代理对区间）
   const segIdx = Math.floor(cp / ALL_SEG_SIZE);
   const segStart = segIdx * ALL_SEG_SIZE;
   let offset = cp - segStart;
-  if (segIdx === 0 && skipC0InAllView) {
-    offset -= ALL_SKIP_C0;
-  }
   // 段 0 中代理对之后的码点需要减去 2048
   if (segIdx === 0 && cp >= 0xE000) {
     offset -= 0xDFFF - 0xD800 + 1;
@@ -4398,7 +4561,7 @@ function jumpToUnicode(raw) {
   }, 100);
 }
 
-// 渲染网格视图的控制栏（跳过控制字符开关 + 点击收藏模式开关 + 收藏进度）
+// 渲染网格视图的控制栏（点击收藏模式开关 + 收藏进度）
 // pageCps: 当前页的字符数组
 function renderGridControlBar(pageCps) {
   if (!pageCps || !pageCps.length) { clearControlBar(); return; }
@@ -4408,13 +4571,8 @@ function renderGridControlBar(pageCps) {
   let favCount = 0;
   for (const cp of pageCps) if (favorites.has(cp)) favCount++;
   const bar = document.getElementById('controlBar');
-  // 「全部字符」视图额外提供"跳过控制字符"开关（默认开，首屏从 U+0020 开始）
-  const skipBtn = currentView === 'all'
-    ? `<button class="toggle-btn ${skipC0InAllView ? 'active' : ''}" onclick="toggleSkipControlChars()" title="开启：顺序浏览从 U+0020（空格）开始，跳过 32 个不可打印的 C0 控制字符；关闭：从 U+0000 开始，包含全部码点">${skipC0InAllView ? '🚫 跳过控制字符：开' : '🚫 跳过控制字符：关'}</button>`
-    : '';
   bar.innerHTML = `
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; width:100%">
-      ${skipBtn}
       <button class="ctrl-click-fav ${clickFavMode?'on':''}" onclick="setClickFavMode(${clickFavMode?'false':'true'})" title="${clickFavMode?'关闭点击收藏，点击字符恢复查看详情（会弹模态框）':'点击收藏模式：点击字符直接收藏或取消，不弹模态框'}">
         ${clickFavMode?'🖱️ 点击收藏：开':'🖱️ 点击收藏：关'}
       </button>
@@ -4829,11 +4987,6 @@ let allSegOffsets = null;     // 每段的全局起始索引
 let allSegFirstCP = null;     // 每段的第一个码点
 let allSegCounts = null;      // 每段码点数
 const ALL_SEG_SIZE = 0x10000; // 每段大小（65536）
-// 「全部字符」默认跳过 C0 控制字符（U+0000–U+001F，不可打印）。
-// 它们排在最前面会让首屏大半个屏幕都是红色警告格，第一印象很差；
-// 关掉这个开关即可按原始码点顺序从 U+0000 开始浏览（控制字符依然完全可达）。
-let skipC0InAllView = true;
-const ALL_SKIP_C0 = 0x20;     // 被跳过的 C0 控制字符个数（U+0000..U+001F）
 
 function buildAllSegIndex() {
   if (allSegOffsets) return;
@@ -4842,9 +4995,8 @@ function buildAllSegIndex() {
   for (let segStart = 0; segStart <= 0x10FFFF; segStart += ALL_SEG_SIZE) {
     const segEnd = Math.min(segStart + ALL_SEG_SIZE, 0x110000);
     let segCount = segEnd - segStart;
-    // 段 0：可选跳过 C0 控制字符，并排除代理对码点（0xD800-0xDFFF 只在段 0）
+    // 段 0：排除代理对码点（0xD800-0xDFFF 只在段 0）
     if (segStart === 0) {
-      if (skipC0InAllView) segCount -= ALL_SKIP_C0;
       const surrStart = Math.max(0xD800, segStart);
       const surrEnd = Math.min(0xDFFF + 1, segEnd);
       segCount -= (surrEnd - surrStart);
@@ -4860,7 +5012,7 @@ function buildAllSegIndex() {
   allCharsTotal = globalIdx;
 }
 
-// 获取第 idx 个有效码点（全局索引，排除代理对，可选排除 C0 控制字符）
+// 获取第 idx 个有效码点（全局索引，排除代理对）
 function getCPByGlobalIdx(idx) {
   buildAllSegIndex();
   // 二分查找所在段
@@ -4871,8 +5023,6 @@ function getCPByGlobalIdx(idx) {
     else { hi = mid - 1; }
   }
   let cp = allSegFirstCP[segIdx] + (idx - allSegOffsets[segIdx]);
-  // 段 0：补回段首被跳过的 C0 控制字符
-  if (segIdx === 0 && skipC0InAllView) cp += ALL_SKIP_C0;
   // 段 0：跳过代理对区间
   if (segIdx === 0 && cp >= 0xD800) {
     cp += 0xDFFF - 0xD800 + 1; // 跳过 2048 个代理对码点
@@ -4897,21 +5047,11 @@ function showAllChars() {
   currentChars = [];  // 不预构建数组，按需分页
   currentPage = 0;
   buildAllSegIndex(); // 预计算分段索引（很快，<10ms）
-  setTitle(`🔠 全部字符（共 ${allCharsTotal.toLocaleString()} 个${skipC0InAllView ? '，已跳过 32 个 C0 控制字符' : ''}）`);
+  setTitle(`🔠 全部字符（共 ${allCharsTotal.toLocaleString()} 个）`);
   setActiveNav('all');
   clearControlBar();
   renderGrid();
   document.getElementById('contentScroll').scrollTop = 0;
-}
-
-// 切换「全部字符」是否跳过 C0 控制字符（开关后重建索引并回到第一页）
-function toggleSkipControlChars() {
-  skipC0InAllView = !skipC0InAllView;
-  allSegOffsets = null; allSegFirstCP = null; allSegCounts = null; allCharsTotal = -1;
-  showAllChars();
-  showToast(skipC0InAllView
-    ? '已跳过 C0 控制字符，从 U+0020（空格）开始'
-    : '已包含全部码点，从 U+0000 开始');
 }
 
 // ============================================================
@@ -6720,6 +6860,22 @@ function showDetail(cp, silent) {
       </div>
     ` : '';
 
+  // 分解映射展示：区分兼容分解（带 <tag>）与规范分解
+  let decompRow = '';
+  if (info.decomposition && info.decomposition !== '无') {
+    const tagM = info.decomposition.match(/^<([a-zA-Z]+)>\s*/);
+    if (tagM) {
+      const tagCn = DECOMP_TAGS[tagM[1]] || tagM[1];
+      const parts = info.decomposition.slice(tagM[0].length).trim().split(/\s+/)
+        .map(h => { const c = safeChr(parseInt(h, 16)); return c ? c : `U+${h.toUpperCase()}`; }).join(' ');
+      decompRow = row('兼容分解', `<span style="background:var(--bg);font-size:11px;padding:1px 6px;border-radius:3px;margin-right:6px">&lt;${tagM[1]}&gt; ${tagCn}</span>${escapeHtml(parts)}`);
+    } else {
+      const parts = info.decomposition.trim().split(/\s+/)
+        .map(h => { const c = safeChr(parseInt(h, 16)); return c ? c : `U+${h.toUpperCase()}`; }).join(' ');
+      decompRow = row('分解映射（规范）', escapeHtml(parts));
+    }
+  }
+
   document.getElementById('modalBody').innerHTML = `
     ${renderWarningBanner(flags)}
     <div class="modal-section"><h3>📋 基本信息</h3>
@@ -6740,6 +6896,19 @@ function showDetail(cp, silent) {
       ${row('HTML 实体', info.html)}
       ${row('CSS 转义', info.css)}
       ${row('URL 编码', info.url)}
+    </div>
+    <div class="modal-section"><h3>🔬 高级属性</h3>
+      ${row('双向类别 (bidi)', `${info.bidi} (${info.bidiDesc})`)}
+      ${row('组合类', String(info.combining))}
+      ${row('镜像', info.mirrored)}
+      ${info.lower !== '无' ? row('小写形式', info.lower) : ''}
+      ${info.upper !== '无' ? row('大写形式', info.upper) : ''}
+      ${info.title !== '无' ? row('标题形式', info.title) : ''}
+      ${decompRow}
+      ${info.script ? row(`文字系统 (sc)`, `${info.script}${info.scriptCn ? ' · ' + info.scriptCn : ''}`) : ''}
+      ${info.scriptExts ? row('文字扩展 (scx)', info.scriptExts) : ''}
+      ${info.lineBreak ? row(`断行类别 (lb)`, `${info.lineBreak}${info.lineBreakDesc ? ' · ' + info.lineBreakDesc : ''}`) : ''}
+      ${(!info.script || !info.lineBreak) ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">💡 上传 Scripts.txt / LineBreak.txt 后可显示文字系统与断行类别（设置 → 数据更新）</div>` : ''}
     </div>
   `;
 
@@ -7112,6 +7281,16 @@ function renderSettingsBody() {
           <div style="margin:4px 0"><a href="https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt</a></div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">说明：定义 Unicode 17.0 全部 346 个区块名称与起止码点。文件约 11 KB。</div>
         </div>
+        <div style="margin:10px 0 6px"><b>📄 文件 3：Scripts.txt</b> <span style="font-size:12px;color:var(--accent)">（可选）</span></div>
+        <div style="margin-left:16px">
+          <div style="margin:4px 0"><a href="https://www.unicode.org/Public/17.0.0/ucd/Scripts.txt" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/17.0.0/ucd/Scripts.txt</a></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">说明：文字系统属性（sc / scx）。文件约 200 KB。</div>
+        </div>
+        <div style="margin:10px 0 6px"><b>📄 文件 4：LineBreak.txt</b> <span style="font-size:12px;color:var(--accent)">（可选）</span></div>
+        <div style="margin-left:16px">
+          <div style="margin:4px 0"><a href="https://www.unicode.org/Public/17.0.0/ucd/LineBreak.txt" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/17.0.0/ucd/LineBreak.txt</a></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">说明：断行类别属性（lb）。文件约 180 KB。</div>
+        </div>
         <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);font-size:12px;color:var(--muted)">
           📂 备用入口（含所有 UCD 文件）：<br>
           <a href="https://www.unicode.org/Public/17.0.0/ucd/" target="_blank" style="word-break:break-all">https://www.unicode.org/Public/17.0.0/ucd/</a><br>
@@ -7127,7 +7306,16 @@ function renderSettingsBody() {
           📄 上传 Blocks.txt
           <input type="file" accept=".txt,text/plain" onchange="uploadBlocksFile(event)" style="display:none">
         </label>
+        <label class="file-upload-btn">
+          📄 上传 Scripts.txt
+          <input type="file" accept=".txt,text/plain" onchange="uploadScriptsFile(event)" style="display:none">
+        </label>
+        <label class="file-upload-btn">
+          📄 上传 LineBreak.txt
+          <input type="file" accept=".txt,text/plain" onchange="uploadLineBreakFile(event)" style="display:none">
+        </label>
       </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px">💡 Scripts.txt 提供文字系统（sc / scx）属性，LineBreak.txt 提供断行类别（lb）属性；上传后详情弹窗的「高级属性」会完整显示。文件均在下方 UCD 目录可下载。</p>
       <div id="fileProgress" class="update-progress" style="display:none"></div>
     </div>
 
@@ -7203,6 +7391,13 @@ function renderSettingsBody() {
       <h3>💬 反馈与联系</h3>
       <p>有任何问题或建议，欢迎通过以下方式联系我：</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        <a href="https://github.com/longchangjin2-arch/Unicode-chaxun" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:8px;text-decoration:none;color:inherit;transition:background 0.2s">
+          <span style="font-size:24px">🐙</span>
+          <div>
+            <div style="font-weight:bold">GitHub 仓库</div>
+            <div style="font-size:12px;color:var(--muted)">github.com/longchangjin2-arch/Unicode-chaxun</div>
+          </div>
+        </a>
         <a href="mailto:3772387377@qq.com" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:8px;text-decoration:none;color:inherit;transition:background 0.2s">
           <span style="font-size:24px">📧</span>
           <div>
@@ -7228,13 +7423,19 @@ function renderSettingsBody() {
       <details style="margin-top:10px">
         <summary style="cursor:pointer;font-size:13px;font-weight:600;user-select:none">📜 更新日志</summary>
         <div class="app-changelog">
-          <h4>v0.0.1 <span style="color:var(--muted);font-weight:400;font-size:11px">当前版本</span></h4>
+          <h4>v0.0.2 <span style="color:var(--muted);font-weight:400;font-size:11px">当前版本</span></h4>
+          <ul>
+            <li><b>高级属性</b>：详情弹窗新增「🔬 高级属性」，参考 codepoints.net 展示双向类别、组合类、镜像、大写/小写/标题形式、分解映射（区分规范/兼容分解），以及文字系统（sc / scx）与断行类别（lb）</li>
+            <li><b>新数据源</b>：支持上传 Scripts.txt（sc / scx）与 LineBreak.txt（lb），上传后高级属性完整显示</li>
+            <li><b>GitHub</b>：设置面板新增项目仓库入口</li>
+          </ul>
+          <h4 style="margin-top:10px">v0.0.1</h4>
           <ul>
             <li><b>性能</b>：大区块浏览、收藏平铺全面改为虚拟滚动（只渲染可视区），CJK 几万字符区块滚动流畅；悬停高亮改用 GPU 合成，几千格子下依然跟手</li>
             <li><b>体积</b>：字典数据从 zlib 换为 Brotli 压缩（2.32MB → 1.75MB），内嵌轻量解码器，单文件从最初 8.9MB 减至约 2.6MB</li>
             <li><b>收藏</b>：点击收藏模式一键开关；收藏/取消就地更新界面不刷新页面</li>
             <li><b>批量解析</b>：字符→编码、编码→字符双向解析，支持 U+、\\u、0x、HTML 实体、CSS 转义、URL 编码等混合格式</li>
-            <li><b>其他</b>：默认跳过控制字符；深色模式持久化；QQ 群二维码改为加群链接；详情弹窗精简</li>
+            <li><b>其他</b>：控制字符始终可浏览；深色模式持久化；QQ 群二维码改为加群链接；详情弹窗精简</li>
           </ul>
         </div>
       </details>
