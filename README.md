@@ -2,7 +2,9 @@
 
 一个功能丰富的 Unicode 字符查询与浏览工具，纯前端单页应用，无需后端服务，开箱即用。
 
-当前版本：**v0.0.1**（更新日志见 README 底部，或打开应用「设置 → 关于本工具」查看）
+当前版本：**v0.0.2**（更新日志见 README 底部，或打开应用「设置 → 关于本工具」查看）
+
+GitHub：[longchangjin2-arch/Unicode-chaxun](https://github.com/longchangjin2-arch/Unicode-chaxun)
 
 基于 **Unicode 17.0** 标准，内置全部 346 个区块定义。
 
@@ -50,8 +52,7 @@
 ### 📂 浏览方式
 
 **全部字符**
-- 按 Unicode 码点顺序浏览全部有效字符（懒加载按需分页）
-- **默认跳过 C0 控制字符（U+0000–U+001F）**，首屏从 U+0020（空格）开始，不会一进来就是满屏红色警告格；顶部「🚫 跳过控制字符」开关可随时关闭，关闭后从 U+0000 开始、包含全部码点
+- 按 Unicode 码点顺序浏览全部有效字符（懒加载按需分页），从 U+0000 开始，控制字符始终包含在内
 - 支持跳转到指定页码
 - 支持按 Unicode 编码跳转定位，自动高亮对应字符
 
@@ -81,9 +82,13 @@
 ### 📄 字符详情
 点击任意字符弹出详情卡片，包含：
 - 字符预览 + Unicode 码点（十六进制/十进制）
+- 字符名称、所属区块（中英文）、Unicode 类别
 - UTF-8 / UTF-16 / HTML 实体 / CSS 转义 / URL 编码
-- Unicode 类别
-- 所属区块（中英文）
+- **🔬 高级属性**（参考 codepoints.net）：
+  - 双向类别（bidi）、组合类、镜像
+  - 大写 / 小写 / 标题形式（如 Æ → 小写 æ）
+  - 分解映射（区分规范分解与兼容分解，兼容分解标注 `<compat>` 等标签并显示组合结果字符）
+  - 文字系统（sc，如 Latin · 拉丁文）、文字扩展（scx）、断行类别（lb）——上传 Scripts.txt / LineBreak.txt 后显示
 - 字符含义（内置字典 + 用户自定义）
 - 字典信息（拼音、笔画、部首）
 - 不可见字符特殊标记与警示
@@ -102,7 +107,7 @@
 ### 详情弹窗导航
 - 底部导航栏：◀ 上一个 / 下一个 ▶
 - 键盘快捷键：← 上一个 / → 下一个 / Esc 关闭
-- 导航位置显示：如 `1,234 / 1,112,032`（全局索引；默认跳过 32 个 C0 控制字符并排除 2,048 个代理码点，关闭「跳过控制字符」后为 1,112,064）
+- 导航位置显示：如 `1,234 / 1,112,064`（全局索引；排除 2,048 个代理码点，包含全部其余码点）
 
 ---
 
@@ -166,12 +171,14 @@
 内置数据包含全部 346 个区块定义，但不含每个字符的详细属性。如需完整数据：
 
 1. 打开设置 → 「从文件更新」
-2. 下载以下两个文件（Unicode 17.0.0）：
-   - **UnicodeData.txt**：[https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt](https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt)（约 2.1 MB）
+2. 下载以下文件（Unicode 17.0.0）：
+   - **UnicodeData.txt**：[https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt](https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt)（约 2.1 MB，必需：名称/类别/大小写映射/分解映射等）
    - **Blocks.txt**：[https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt](https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt)（约 11 KB）
-3. 点击「上传 UnicodeData.txt」和「上传 Blocks.txt」
+   - **Scripts.txt**：[https://www.unicode.org/Public/17.0.0/ucd/Scripts.txt](https://www.unicode.org/Public/17.0.0/ucd/Scripts.txt)（约 200 KB，可选：文字系统 sc / scx）
+   - **LineBreak.txt**：[https://www.unicode.org/Public/17.0.0/ucd/LineBreak.txt](https://www.unicode.org/Public/17.0.0/ucd/LineBreak.txt)（约 180 KB，可选：断行类别 lb）
+3. 在设置面板分别点击对应上传按钮
 
-上传后可获得全部 159,801 个字符的名称、类别、大小写映射、双向属性等完整信息。数据存储在浏览器 IndexedDB 中。
+上传后可获得全部 159,801 个字符的名称、类别、大小写映射、分解映射、双向属性，以及（可选）文字系统与断行类别。数据存储在浏览器 IndexedDB 中。
 
 **上传 Blocks.txt 后会自动更新的功能**：
 - 分类浏览（17 个平面各平面下的区块列表、数量、范围、空平面判定）
@@ -221,10 +228,21 @@
 
 ## 更新日志
 
-### v0.0.1（最新）
+### v0.0.2（最新）
 
+- **详情弹窗新增「🔬 高级属性」**（参考 codepoints.net 的信息结构）：
+  - 双向类别（bidi，含中文说明）、组合类、镜像
+  - **大写 / 小写 / 标题形式**：来自 UnicodeData.txt 映射（无上传数据时用 JS 内置大小写回退），如 Æ → 小写 æ
+  - **分解映射**：区分规范分解与兼容分解，兼容分解显示 `<compat>` 等标签（含中文说明），并把分解目标渲染为可读字符
+  - **文字系统（sc）/ 文字扩展（scx）/ 断行类别（lb）**：新增支持上传 Scripts.txt 与 LineBreak.txt（IndexedDB 持久化，含 30+ 常见文字系统中文名与 30+ 断行类别中文说明），未上传时显示引导提示
+- **设置面板新增 GitHub 仓库入口**：[longchangjin2-arch/Unicode-chaxun](https://github.com/longchangjin2-arch/Unicode-chaxun)，点击直接打开
+- 此前版本的全部优化与修复随本版一并带入（见下方批次记录）
+
+### v0.0.1
+
+- **控制字符始终可浏览**：移除「🚫 跳过控制字符」开关，全部字符视图固定从 U+0000 开始、包含除代理码点外的全部 1,112,064 个码点，C0 控制字符（U+0000–U+001F）永远可达
 - **文件体积 3.38MB → 2.64MB**：字典数据压缩方案从 zlib/deflate（2.32MB）整体换为 **Brotli**（1.75MB，缩小 25%），内嵌基于 Google Brotli JS 移植的轻量解码器（约 90KB，加载时一次性解压约 0.5 秒）；同时删除了退役的 tiny-inflate 依赖。字典 14,809 条内容经比对与原版逐字节一致
-- **版本号与关于面板**：新增应用版本号 **v0.0.1**；设置面板新增「ℹ️ 关于本工具」区块，内嵌版本号、工具介绍、更新日志（可折叠）与免责声明
+- **版本号与关于面板**：新增应用版本号；设置面板新增「ℹ️ 关于本工具」区块，内嵌版本号、工具介绍、更新日志（可折叠）与免责声明
 - 此前版本的全部优化与修复随本版一并带入（见下方批次记录）
 
 ### 设置面板调整
